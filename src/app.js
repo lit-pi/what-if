@@ -1093,10 +1093,10 @@ function renderPlayView(root) {
               : ''
           }
 
-          <!-- 主角对话框 (含角色独立高清立绘/说话人/神态表情) -->
+          <!-- 主角对话框 (含角色独立精致头像/说话人/神态表情) -->
           <div class="rpg-speech-box">
             <div class="speaker-portrait-row">
-              <div class="portrait-avatar-frame">
+              <div class="portrait-avatar-frame" style="border-color: ${currentSpeaker.color}; box-shadow: 0 0 14px color-mix(in srgb, ${currentSpeaker.color} 40%, transparent);">
                 ${
                   currentSpeaker.image
                     ? `<img src="${currentSpeaker.image}" class="speaker-portrait-img" alt="${currentSpeaker.name}" />`
@@ -1106,7 +1106,7 @@ function renderPlayView(root) {
               
               <div class="speaker-identity">
                 <strong class="speaker-name-title" style="color: ${currentSpeaker.color};">${currentSpeaker.name}</strong>
-                <span class="emotion-badge">${currentDialogue.emotion || '观察中'}</span>
+                <span class="emotion-badge" style="color: ${currentSpeaker.color}; border-color: color-mix(in srgb, ${currentSpeaker.color} 40%, transparent); background: color-mix(in srgb, ${currentSpeaker.color} 15%, transparent);">${currentDialogue.emotion || '观察中'}</span>
               </div>
             </div>
 
