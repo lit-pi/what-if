@@ -983,14 +983,25 @@ function renderStartView(root) {
 function renderStageLayout(layoutMode, currentSpeaker, currentDialogue, scene) {
   const currentSpeakerId = currentDialogue.characterId;
 
-  // 方案 1: 顶置 100% 全景 Tag
+  // 方案 1: 顶置 100% 全景 Tag (含角色圆框头像)
   if (layoutMode === 'banner') {
     return `
       <div class="stage-overlay mode-banner">
         <div class="banner-speaker-badge" style="--speaker-color: ${currentSpeaker.color};">
-          <span class="badge-role" style="color: ${currentSpeaker.color};">${currentSpeaker.role}</span>
-          <strong class="badge-name">${currentSpeaker.name}</strong>
-          <span class="badge-emotion">${currentDialogue.emotion || '说话中'}</span>
+          <div class="badge-avatar-ring" style="border-color: ${currentSpeaker.color};">
+            ${
+              currentSpeaker.image
+                ? `<img src="${currentSpeaker.image}" class="badge-avatar-img" alt="${currentSpeaker.name}" />`
+                : `<div class="badge-avatar-circle" style="background: ${currentSpeaker.color};">${currentSpeaker.avatar}</div>`
+            }
+          </div>
+          <div class="badge-text-group">
+            <div class="badge-top-row">
+              <span class="badge-role" style="color: ${currentSpeaker.color};">${currentSpeaker.role}</span>
+              <strong class="badge-name">${currentSpeaker.name}</strong>
+            </div>
+            <span class="badge-emotion">${currentDialogue.emotion || '说话中'}</span>
+          </div>
         </div>
       </div>
     `;
@@ -1175,19 +1186,13 @@ function renderPlayView(root) {
           <!-- 主角对话框 (含角色独立精致头像/说话人/神态表情) -->
           <div class="rpg-speech-box">
             <div class="speaker-portrait-row">
-              ${
-                stageLayoutMode !== 'banner'
-                  ? `
-                <div class="portrait-avatar-frame" style="border-color: ${currentSpeaker.color}; box-shadow: 0 0 14px color-mix(in srgb, ${currentSpeaker.color} 40%, transparent);">
-                  ${
-                    currentSpeaker.image
-                      ? `<img src="${currentSpeaker.image}" class="speaker-portrait-img" alt="${currentSpeaker.name}" />`
-                      : `<div class="speaker-avatar-circle" style="background: ${currentSpeaker.color};">${currentSpeaker.avatar}</div>`
-                  }
-                </div>
-              `
-                  : ''
-              }
+              <div class="portrait-avatar-frame" style="border-color: ${currentSpeaker.color}; box-shadow: 0 0 14px color-mix(in srgb, ${currentSpeaker.color} 40%, transparent);">
+                ${
+                  currentSpeaker.image
+                    ? `<img src="${currentSpeaker.image}" class="speaker-portrait-img" alt="${currentSpeaker.name}" />`
+                    : `<div class="speaker-avatar-circle" style="background: ${currentSpeaker.color};">${currentSpeaker.avatar}</div>`
+                }
+              </div>
               
               <div class="speaker-identity">
                 <strong class="speaker-name-title" style="color: ${currentSpeaker.color};">${currentSpeaker.name}</strong>
