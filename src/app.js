@@ -547,6 +547,7 @@ let appState = {
   currentSceneIndex: 0,
   activeIdentityTab: 'public',
   showDevStats: false,
+  stageLayoutMode: 'standard', // 'standard' | 'banner' | 'standee' | 'tactical-cards'
   isSceneTransitioning: false,
   
   dialogueIndex: 0,
@@ -979,6 +980,70 @@ function renderStartView(root) {
   });
 }
 
+function renderStageLayout(layoutMode, currentSpeaker, currentDialogue, scene) {
+  const currentSpeakerId = currentDialogue.characterId;
+
+  // 方案 1: 顶置 100% 全景 Tag
+  if (layoutMode === 'banner') {
+    return `
+      <div class="stage-overlay mode-banner">
+        <div class="banner-speaker-badge" style="--speaker-color: ${currentSpeaker.color};">
+          <span class="badge-role" style="color: ${currentSpeaker.color};">${currentSpeaker.role}</span>
+          <strong class="badge-name">${currentSpeaker.name}</strong>
+          <span class="badge-emotion">${currentDialogue.emotion || '说话中'}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // 方案 2: 侧边经典 RPG 极简透明立绘 (双立绘对峙)
+  if (layoutMode === 'standee') {
+    const isAslanSpeaking = currentSpeakerId === 'aslan';
+    return `
+      <div class="stage-overlay mode-standee">
+        <div class="standee-card standee-left ${isAslanSpeaking ? 'speaking' : 'dim'}">
+          <img src="assets/char_aslan.png" class="standee-portrait" alt="阿斯兰" />
+          <span class="standee-label">👑 卧底魔王 · 阿斯兰</span>
+        </div>
+        ${currentSpeakerId !== 'aslan' ? `
+          <div class="standee-card standee-right speaking">
+            <img src="${currentSpeaker.image}" class="standee-portrait" alt="${currentSpeaker.name}" />
+            <span class="standee-label">${currentSpeaker.tagIcon || '◆'} ${currentSpeaker.role} · ${currentSpeaker.name}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // 方案 3: 顶置战术队伍卡片
+  if (layoutMode === 'tactical-cards') {
+    const teamIds = ['aslan', 'leon', 'ivette', 'victor'];
+    return `
+      <div class="stage-overlay mode-tactical">
+        <div class="tactical-cards-bar">
+          ${teamIds
+            .map((id) => {
+              const char = CHARACTERS[id];
+              if (!char) return '';
+              const isSpeaking = id === currentSpeakerId;
+              return `
+                <div class="tactical-chip ${isSpeaking ? 'active' : ''}" style="--char-color: ${char.color};">
+                  <img src="${char.image}" class="chip-avatar" alt="${char.name}" />
+                  <span class="chip-name">${char.name}</span>
+                  ${isSpeaking ? '<span class="pulse-dot"></span>' : ''}
+                </div>
+              `;
+            })
+            .join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 默认方案 (standard): 画面中央干净通透，无额外 Overlays
+  return '';
+}
+
 // ---------------------------------------------------------------------------
 // 全屏 9:16 - 游玩视图 (人设立绘 + 对话气泡 + 纯净过场无选项干扰)
 // ---------------------------------------------------------------------------
@@ -1017,6 +1082,8 @@ function renderPlayView(root) {
   // 判断是否渲染选项盘 (严格遵守：过场/对话播放中 绝对不显示选项和输入框)
   const shouldShowChoices = isLastDialogue && !appState.isSceneTransitioning;
 
+  const stageLayoutMode = appState.stageLayoutMode || 'standard';
+
   root.innerHTML = `
     <main class="full-screen-app play-screen">
       <!-- 1. 幕数黑屏转场 Card (Persona 5 / 八方旅人 风格) -->
@@ -1049,6 +1116,15 @@ function renderPlayView(root) {
           <button id="dev-stats-toggle" class="dev-icon-btn" title="开发者调试">⚙️</button>
         </header>
 
+        <!-- 布局方案交互体验切换条 -->
+        <div class="layout-mode-switcher-bar">
+          <span class="switcher-label">🎭 布局方案:</span>
+          <button class="mode-btn ${stageLayoutMode === 'standard' ? 'active' : ''}" data-layout-mode="standard">默认底框</button>
+          <button class="mode-btn ${stageLayoutMode === 'banner' ? 'active' : ''}" data-layout-mode="banner">1.顶置Tag</button>
+          <button class="mode-btn ${stageLayoutMode === 'standee' ? 'active' : ''}" data-layout-mode="standee">2.侧边双立绘</button>
+          <button class="mode-btn ${stageLayoutMode === 'tactical-cards' ? 'active' : ''}" data-layout-mode="tactical-cards">3.战术小队</button>
+        </div>
+
         <!-- 开发者可选隐藏面板 (默认关) -->
         ${
           appState.showDevStats
@@ -1074,6 +1150,9 @@ function renderPlayView(root) {
         <!-- 角色独立立绘 + 说话人对话气泡舞台 -->
         <div class="rpg-dialogue-stage">
           
+          <!-- 动态舞台 Layout Overlays (方案 1 / 2 / 3) -->
+          ${renderStageLayout(stageLayoutMode, currentSpeaker, currentDialogue, scene)}
+
           <!-- 上回合裁决短 Badge (若有) -->
           ${
             lastTurn && appState.dialogueIndex === 0
@@ -1096,13 +1175,19 @@ function renderPlayView(root) {
           <!-- 主角对话框 (含角色独立精致头像/说话人/神态表情) -->
           <div class="rpg-speech-box">
             <div class="speaker-portrait-row">
-              <div class="portrait-avatar-frame" style="border-color: ${currentSpeaker.color}; box-shadow: 0 0 14px color-mix(in srgb, ${currentSpeaker.color} 40%, transparent);">
-                ${
-                  currentSpeaker.image
-                    ? `<img src="${currentSpeaker.image}" class="speaker-portrait-img" alt="${currentSpeaker.name}" />`
-                    : `<div class="speaker-avatar-circle" style="background: ${currentSpeaker.color};">${currentSpeaker.avatar}</div>`
-                }
-              </div>
+              ${
+                stageLayoutMode !== 'banner'
+                  ? `
+                <div class="portrait-avatar-frame" style="border-color: ${currentSpeaker.color}; box-shadow: 0 0 14px color-mix(in srgb, ${currentSpeaker.color} 40%, transparent);">
+                  ${
+                    currentSpeaker.image
+                      ? `<img src="${currentSpeaker.image}" class="speaker-portrait-img" alt="${currentSpeaker.name}" />`
+                      : `<div class="speaker-avatar-circle" style="background: ${currentSpeaker.color};">${currentSpeaker.avatar}</div>`
+                  }
+                </div>
+              `
+                  : ''
+              }
               
               <div class="speaker-identity">
                 <strong class="speaker-name-title" style="color: ${currentSpeaker.color};">${currentSpeaker.name}</strong>
@@ -1174,6 +1259,15 @@ function renderPlayView(root) {
     e.stopPropagation();
     appState.showDevStats = !appState.showDevStats;
     render();
+  });
+
+  document.querySelectorAll('[data-layout-mode]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const mode = btn.getAttribute('data-layout-mode');
+      appState.stageLayoutMode = mode;
+      render();
+    });
   });
 
   // 点击屏幕推进逐句对话
