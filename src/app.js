@@ -996,7 +996,7 @@ function renderStartView(root) {
           <p class="tagline">“本来只想混个卧底摸鱼，谁知道一不小心混成了勇者队的战力天花板……”</p>
         </header>
 
-        <div style="flex: 1;"></div>
+        <div style="flex: 0.5;"></div>
 
         <section class="poster-brief-card">
           <strong>阿斯兰 · 卧底魔王潜伏契约</strong>
@@ -1005,9 +1005,11 @@ function renderStartView(root) {
           </p>
         </section>
 
+        <div style="flex: 0.5;"></div>
+
         <footer class="bottom-action-bar" style="margin-top: 10px;">
           <button id="start-game-btn" class="glow-primary-btn pulse">
-            <span>开启自由对话潜伏 (步步惊心 · 悬疑对戏)</span>
+            <span>步步惊心 · 悬疑对战</span>
           </button>
         </footer>
       </div>
