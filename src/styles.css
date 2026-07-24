@@ -593,17 +593,16 @@ button {
   height: 75%;
   max-width: 100%;
   object-fit: contain;
-  mix-blend-mode: multiply;
-  opacity: 0.75;
-  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 30px rgba(240, 195, 106, 0.3));
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
+  opacity: 0.9;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.95)) brightness(1.05);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
   animation: heroCloseUpZoom 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes heroCloseUpZoom {
   from { opacity: 0; transform: scale(1.15) translateY(10px); }
-  to { opacity: 0.55; transform: scale(1) translateY(0); }
+  to { opacity: 0.9; transform: scale(1) translateY(0); }
 }
 
 .result-screen .result-content { justify-content: space-between; z-index: 10; }

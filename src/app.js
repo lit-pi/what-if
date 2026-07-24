@@ -1160,7 +1160,9 @@ function renderPlayView(root) {
               <div class="advance-cue">
                 ${
                   isLastDialogue
-                    ? '<span>💬 请输入你的口才解释与行动描述</span>'
+                    ? (lastTurn
+                        ? '<span>⚡ 点击屏幕任意位置转场 ▶</span>'
+                        : '<span>💬 请选择建议或输入你的隐秘行动</span>')
                     : '<span>▼ 点击任意位置继续 (' + (appState.dialogueIndex + 1) + '/' + dialogueQueue.length + ')</span>'
                 }
               </div>
@@ -1170,23 +1172,15 @@ function renderPlayView(root) {
 
           <!-- 5. 自由聊天主导控制台 + 折叠式 💡 建议提示 Drawer -->
           ${
-            shouldShowControls
+            shouldShowControls && !lastTurn
               ? `
             <footer class="img2797-choice-deck deck-visible">
-              ${
-                lastTurn
-                  ? `
-                <button id="next-act-btn" class="glow-primary-btn pulse">
-                  <span>${lastTurn.nextSceneId ? '⚡ 转场 · 前往下一个地貌场景 ▶' : '🏆 查看大结局终局因果特写 ▶'}</span>
+              <!-- 提示选项切换按钮 (默认隐藏) -->
+              <div class="hints-drawer-toggle-row">
+                <button id="toggle-hints-btn" class="hints-toggle-btn">
+                  <span>💡 表达灵感 / 提示建议 (${scene.choices.length}) ${appState.showHintsDrawer ? '▲ 收起' : '▼ 展开'}</span>
                 </button>
-              `
-                  : `
-                <!-- 提示选项切换按钮 (默认隐藏) -->
-                <div class="hints-drawer-toggle-row">
-                  <button id="toggle-hints-btn" class="hints-toggle-btn">
-                    <span>💡 表达灵感 / 提示建议 (${scene.choices.length}) ${appState.showHintsDrawer ? '▲ 收起' : '▼ 展开'}</span>
-                  </button>
-                </div>
+              </div>
 
                 <!-- 经典建议选项卡片 (展开后呈现) -->
                 ${
@@ -1197,7 +1191,6 @@ function renderPlayView(root) {
                       .map(
                         (ch, idx) => `
                       <button class="vn-choice-btn ${ch.riskTag === '支线' ? 'side-quest-btn' : ''}" data-hint-index="${idx}">
-                        <span class="tag tag-${ch.riskTag || '稳妥'}">${ch.riskTag || '建议'}</span>
                         <div class="choice-text-col">
                           <strong class="choice-title-text">${ch.label}</strong>
                           ${ch.intent ? `<small class="choice-intent-text">${ch.intent}</small>` : ''}
@@ -1219,8 +1212,6 @@ function renderPlayView(root) {
                   </div>
                   <button type="submit" class="send-btn">发送</button>
                 </form>
-              `
-              }
             </footer>
           `
               : ''
@@ -1322,11 +1313,6 @@ function renderResultView(root) {
       <!-- 专属结局背景图 -->
       <div class="bg-canvas" style="background-image: url('${bgImage}');"></div>
       <div class="bg-vignette-overlay"></div>
-
-      <!-- 核心：大结局角色大特写舞台 -->
-      <div class="ending-portrait-stage">
-        <img src="${heroPortrait}" class="ending-hero-cutout cutout-transparent" alt="结局特写角色" />
-      </div>
 
       <div class="screen-content result-content">
         <header class="ending-header-box tone-${ending.tone}">
