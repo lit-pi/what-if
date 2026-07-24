@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// 《假如我是勇者队伍里的卧底魔王》- 旁白化场景叙事 + 沉浸式 JRPG 对话流
+// 《假如我是勇者队伍里的卧底魔王》- 旁白化场景叙事 + 魔王慌张表情与大结局特写
 // ---------------------------------------------------------------------------
 
 // 1. 初始全局局势状态
@@ -27,7 +27,7 @@ const STAT_METADATA = {
   butterflyDeviation: { label: '蝴蝶偏离', tone: 'mystic', icon: '🦋' },
 };
 
-// 2. 角色库 (含旁白系统)
+// 2. 角色库 (含旁白与魔王姿态)
 const CHARACTERS = {
   narrator: { id: 'narrator', name: '旁白', role: '场景叙事', avatar: '📖', image: null, color: '#f0c36a', tagIcon: '📜', desc: '局势与场景旁白推演' },
   aslan: {
@@ -36,6 +36,7 @@ const CHARACTERS = {
     role: '卧底魔王',
     avatar: '魔',
     image: './assets/char_aslan.png',
+    panickedImage: './assets/char_aslan_faceoff.png',
     knightImage: './assets/char_aslan_knight.png',
     color: '#c77dff',
     tagIcon: '👑',
@@ -229,7 +230,6 @@ const INITIAL_FLAGS = {
 
 // 3. 场景树与旁白化“突发破绽事件”
 const SCENE_TREE = {
-  // 第 1 幕：城门大门
   gate: {
     id: 'gate',
     act: 1,
@@ -244,7 +244,7 @@ const SCENE_TREE = {
       { characterId: 'narrator', emotion: '🔥 突发破绽', content: '你刚往前踏出一步，门上的三百年魔皇阵灵突然轰鸣演化出一尊巨大的黑曜幻象，当场单膝跪下并用传遍全城的大音狂呼：“尊贵无上的第七代夜冠主上！恭迎陛下御驾亲征——！”全场死寂五秒。' },
       { characterId: 'ivette', emotion: '法杖抵住脖子', content: '阿斯兰……这防魔阵灵刚才是在对你单膝下跪，高喊‘恭迎魔王陛下’吗？！' },
       { characterId: 'leon', emotion: '目瞪口呆', content: '等等！这阵灵是不是坏了？！还是说它被阿斯兰的圣光给净化迷糊了？' },
-      { characterId: 'aslan', emotion: '内心狂吐槽', content: '（维克托你这个智障！！谁让你把大门人脸识别设成‘自动跪拜陛下’的啊？！快给我关掉啊！）' },
+      { characterId: 'aslan', emotion: '内心狂吐槽·汗流浃背', content: '（维克托你这个智障！！谁让你把大门人脸识别设成‘自动跪拜陛下’的啊？！快给我关掉啊！）' },
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：【学者胡扯】编造古魔法的“因果反转诱导阵”', intent: '神色从容解释阵灵是在用反话诱骗自己当祭品', type: 'deceive' },
@@ -298,7 +298,6 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 2A 幕：前庭坍塌废墟
   act2_ruins: {
     id: 'act2_ruins',
     act: 2,
@@ -313,7 +312,7 @@ const SCENE_TREE = {
       { characterId: 'narrator', emotion: '🔥 突发破绽', content: '重伤小兵睁开眼看到你，眼神爆发出狂热，抬手就要单膝下跪叫“陛下”。莱昂下意识握紧了圣剑柄！' },
       { characterId: 'mira', emotion: '指着废墟', content: '落石下面压着一个年轻魔族！他还活着！我们得帮帮他！' },
       { characterId: 'victor', emotion: '暗处流泪', content: '陛下！您的心腹近卫快撑不住了，您会暴露身份救他吗？！' },
-      { characterId: 'aslan', emotion: '内心纠结', content: '（那是亲卫队的新兵小张，上周还给我送过烤薯）绝不能看着他死在我面前！' },
+      { characterId: 'aslan', emotion: '内心纠结·汗流浃背', content: '（那是亲卫队的新兵小张，上周还给我送过烤薯）绝不能看着他死在我面前！' },
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：【巧妙】用魔族密音下达封口令并救人', intent: '背对全队传音“假装昏迷”，顺利救人', type: 'save' },
@@ -352,7 +351,6 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 2B 幕：地下暗黑地牢
   act2_dungeon: {
     id: 'act2_dungeon',
     act: 2,
@@ -367,7 +365,7 @@ const SCENE_TREE = {
       { characterId: 'narrator', emotion: '🔥 突发破绽', content: '伊薇特在地牢翻出了三年前边境修道院的官方名册羊皮纸：“阿斯兰，名册里三年前根本没有你的登记记录！”' },
       { characterId: 'mira', emotion: '握住铁栅栏', content: '这里竟然关着我们人类三年前失踪的边境骑士队长！' },
       { characterId: 'ivette', emotion: '拿起档案', content: '队长身上带有当年修道院档案记录……等等，阿斯兰，档案里没有你的注册名字！' },
-      { characterId: 'aslan', emotion: '内心汗颜', content: '（坏了！当年混进军队时身份证明是假造的！）必须立刻销毁这份残卷。' },
+      { characterId: 'aslan', emotion: '内心汗颜·慌张', content: '（坏了！当年混进军队时身份证明是假造的！）必须立刻销毁这份残卷。' },
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：【机智】斩断枷锁并用圣光剑气引燃档案', intent: '救下队长并“不小心”烧掉名册', type: 'save' },
@@ -407,7 +405,6 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 3A 幕：禁忌图书馆/符文密室
   act3_library: {
     id: 'act3_library',
     act: 3,
@@ -422,7 +419,7 @@ const SCENE_TREE = {
       { characterId: 'narrator', emotion: '🔥 突发破绽', content: '盗贼洛克指着墙上的古魔王真名符文：“嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕印记一模一样？”' },
       { characterId: 'ivette', emotion: '翻阅羊皮纸', content: '找到了！历代夜冠之主的魔力真名印记！阿斯兰，你来看这上面的古符文……' },
       { characterId: 'locke', emotion: '凑过来看', content: '嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕一模一样？' },
-      { characterId: 'aslan', emotion: '汗流浃背', content: '（那是我的家族专属花签！早知道当年不乱涂乱画了！）' },
+      { characterId: 'aslan', emotion: '汗流浃背·慌张', content: '（那是我的家族专属花签！早知道当年不乱涂乱画了！）' },
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：利用古语法解释权混淆成救世英灵印记', intent: '倒装句解读，化解真名危机', type: 'deceive' },
@@ -461,7 +458,6 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 3B 幕：偏殿深处地下宝库
   act3_treasury: {
     id: 'act3_treasury',
     act: 3,
@@ -475,7 +471,7 @@ const SCENE_TREE = {
       { characterId: 'narrator', emotion: '场景引入', content: '【第三幕：深处宝库与私房钱破绽】\n穿过地牢暗道，盗贼洛克撬开了魔王偏殿金库，里面堆满了魔界至宝与黑曜水晶……' },
       { characterId: 'narrator', emotion: '🔥 突发破绽', content: '洛克撬开了皇家核心宝箱，里面装满了精纯黑曜秘银！你心疼得眼角直抽搐。' },
       { characterId: 'locke', emotion: '双眼冒光', content: '发财了！发财了！偏殿宝库里全是精纯的黑曜秘银和魔晶石！' },
-      { characterId: 'aslan', emotion: '心疼暗叹', content: '（那是我储备的三百年私房钱！准备用来修城堡下水道的！）绝不能让他们拿光！' },
+      { characterId: 'aslan', emotion: '心疼暗叹·慌张', content: '（那是我储备的三百年私房钱！准备用来修城堡下水道的！）绝不能让他们拿光！' },
       { characterId: 'leon', emotion: '正色阻拦', content: '洛克！我们的目标是魔王，不要沉迷财物！' },
     ],
     hintSuggestions: [
@@ -516,7 +512,6 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 4 幕：近卫军决死长廊
   act4_corridor: {
     id: 'act4_corridor',
     act: 4,
@@ -530,7 +525,7 @@ const SCENE_TREE = {
       { characterId: 'narrator', emotion: '场景引入', content: '【第四幕：近卫军自爆大阵破绽】\n王座厅前的长廊火光冲天，数百名魔王近卫军激活了绝死自爆大阵……' },
       { characterId: 'narrator', emotion: '🔥 突发破绽', content: '副官维克托在阵中央挥剑狂呼：“为了陛下！全军自爆与人类同归于尽！”近卫军魔力急剧狂暴膨胀！' },
       { characterId: 'victor', emotion: '挥剑狂呼', content: '为了夜冠之主！全军激活自爆阵！与人类勇者同归于尽！' },
-      { characterId: 'aslan', emotion: '急忙伸手', content: '（维克托你这个脑补狂！快停下！这是我的精锐近卫啊！）' },
+      { characterId: 'aslan', emotion: '急忙伸手·慌张', content: '（维克托你这个脑补狂！快停下！这是我的精锐近卫啊！）' },
       { characterId: 'leon', emotion: '拔剑惊呼', content: '不好！这些魔族疯了！他们要引爆整座长廊！' },
     ],
     hintSuggestions: [
@@ -570,7 +565,6 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 5 幕：魔王空王座厅
   act5_throne: {
     id: 'act5_throne',
     act: 5,
@@ -585,7 +579,7 @@ const SCENE_TREE = {
       { characterId: 'narrator', emotion: '🔥 终极破绽', content: '墙上的魔王巨幅雕像露出了真容，全队退后三步死死盯着你与雕像！' },
       { characterId: 'leon', emotion: '环顾四周', content: '王座上没有魔王……可墙上雕刻的面容，怎么会和你一模一样，阿斯兰？' },
       { characterId: 'ivette', emotion: '法杖指向', content: '所有的证据链在这一刻全都吻合了。该摊牌了，夜冠之主！' },
-      { characterId: 'aslan', emotion: '解开披风', content: '（坐在王座前，按住剑柄）同伴们，我终于站回了我的王座前。现在，由我给出最后的答案。' },
+      { characterId: 'aslan', emotion: '解开披风·面色凝重', content: '（坐在王座前，按住剑柄）同伴们，我终于站回了我的王座前。现在，由我给出最后的答案。' },
     ],
     hintSuggestions: [
       { label: '💡 建议思路：正式提出和平与两界共治方案', intent: '在王座前摊开停战契约，建立两界新秩序', type: 'peace' },
@@ -610,24 +604,24 @@ const SCENE_TREE = {
   },
 };
 
-// 4. 结局库
+// 4. 结局库 (场景专属即时大结局 + 终局结局)
 const ENDINGS = {
-  gate_exposure_ending: { id: 'gate_exposure_ending', title: '第一幕：阵灵跪拜·当场伏诛', typeTag: '⚠️ 第一幕即时大结局', tone: 'danger', narration: '在城门前阵灵高呼陛下时，你顺口应了一声！法师伊薇特法杖直指，莱昂震惊拔剑。你还没踏入城门半步，就在第一幕被勇者小队当场看破身份围攻伏诛！' },
-  ruins_arrest_ending: { id: 'ruins_arrest_ending', title: '第二幕：前庭失口·当场逮捕', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', narration: '面对重伤的魔族小兵，你一时失口扶起他称呼“辛苦了，我的部下”。小兵下意识单膝下跪喊陛下。莱昂与全队瞬间拔剑，在第二幕前庭废墟将你当场扣押入狱！' },
-  dungeon_rupture_ending: { id: 'dungeon_rupture_ending', title: '第二幕：地牢残忍·众叛亲离', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', narration: '你在地牢企图对掌握证据的前王国军官残忍灭口！米拉与莱昂难以置信地退后，坚决阻止你的残暴行为。勇者小队的羁绊瞬间瓦解，讨伐战斗在第二幕提前爆发！' },
-  library_seal_ending: { id: 'library_seal_ending', title: '第三幕：真名曝光·图书馆封印', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', narration: '你编造了漏洞百出的法术谎言，法师伊薇特翻开三千年前的古籍当场连拆你 3 处矛盾！证据彻底闭环，你被禁忌图书馆的封印结界当场困死！' },
-  treasury_confess_ending: { id: 'treasury_confess_ending', title: '第三幕：私房钱暴走·身份败露', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', narration: '看着洛克拿走你积攒三年的私房钱，你失控大喊“住手！那是我换城堡水管的钱！”。全场静止三秒后，洛克与莱昂异口同声：“你管魔王宝库叫私房钱？！”' },
-  corridor_betrayal_ending: { id: 'corridor_betrayal_ending', title: '第四幕：决死长廊·自爆反噬', typeTag: '⚠️ 第四幕即时大结局', tone: 'danger', narration: '你选择强杀自己的忠诚副官维克托！维克托倒下前绝望惊呼“陛下为何杀我？”，引爆了整座长廊自爆大阵，魔王城深处沦为一片火海惨烈收场。' },
+  gate_exposure_ending: { id: 'gate_exposure_ending', title: '第一幕：阵灵跪拜·当场伏诛', typeTag: '⚠️ 第一幕即时大结局', tone: 'danger', bgImage: './assets/black_holy_light.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '在城门前阵灵高呼陛下时，你顺口应了一声！法师伊薇特法杖直指，莱昂震惊拔剑。你还没踏入城门半步，就在第一幕被勇者小队当场看破身份围攻伏诛！' },
+  ruins_arrest_ending: { id: 'ruins_arrest_ending', title: '第二幕：前庭失口·当场逮捕', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/collapsed_ruins.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '面对重伤的魔族小兵，你一时失口扶起他称呼“辛苦了，我的部下”。小兵下意识单膝下跪喊陛下。莱昂与全队瞬间拔剑，在第二幕前庭废墟将你当场扣押入狱！' },
+  dungeon_rupture_ending: { id: 'dungeon_rupture_ending', title: '第二幕：地牢残忍·众叛亲离', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/demon_dungeon_v.png', heroPortrait: './assets/char_leon.png', narration: '你在地牢企图对掌握证据的前王国军官残忍灭口！米拉与莱昂难以置信地退后，坚决阻止你的残暴行为。勇者小队的羁绊瞬间瓦解，讨伐战斗在第二幕提前爆发！' },
+  library_seal_ending: { id: 'library_seal_ending', title: '第三幕：真名曝光·图书馆封印', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/forbidden_library_v.png', heroPortrait: './assets/char_ivette.png', narration: '你编造了漏洞百出的法术谎言，法师伊薇特翻开三千年前的古籍当场连拆你 3 处矛盾！证据彻底闭环，你被禁忌图书馆的封印结界当场困死！' },
+  treasury_confess_ending: { id: 'treasury_confess_ending', title: '第三幕：私房钱暴走·身份败露', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/demon_treasury_v.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '看着洛克拿走你积攒三年的私房钱，你失控大喊“住手！那是我换城堡水管的钱！”。全场静止三秒后，洛克与莱昂异口同声：“你管魔王宝库叫私房钱？！”' },
+  corridor_betrayal_ending: { id: 'corridor_betrayal_ending', title: '第四幕：决死长廊·自爆反噬', typeTag: '⚠️ 第四幕即时大结局', tone: 'danger', bgImage: './assets/vanguard_corridor_v.png', heroPortrait: './assets/char_victor.png', narration: '你选择强杀自己的忠诚副官维克托！维克托倒下前绝望惊呼“陛下为何杀我？”，引爆了整座长廊自爆大阵，魔王城深处沦为一片火海惨烈收场。' },
 
-  exposed: { id: 'exposed', title: '身份败露', typeTag: '硬失败结局', tone: 'danger', narration: '所有伪装在一瞬间崩塌。莱昂举剑对峙，伊薇特张开禁锢法阵，米拉难以置信地后退。你摘下银白头盔叹了口气：“好吧，讨伐会议提前开始。”' },
-  castleLost: { id: 'castleLost', title: '城在人亡', typeTag: '硬失败结局', tone: 'danger', narration: '你保住了魔王身份，却没能保住城堡。魔王城在战火中轰然倒塌，只剩王座和一间漏风的废墟。维克托建议将其改名为“极简主义魔王办公室”。' },
-  dualRuler: { id: 'dualRuler', title: '双面共主', typeTag: '和平结局', tone: 'good', narration: '人类不完全信你，魔族也不完全理解你。但两边都不得不承认，只有你能把这场大战讲成一场可执行的和平框架。你成为了两界唯一的沟通桥梁。' },
-  redeemed: { id: 'redeemed', title: '被迫转正', typeTag: '和平结局', tone: 'good', narration: '你原本只是想演个好人，结果演着演着真的不想毁灭世界了。莱昂邀请你加入新王国议会，你第一次认真思考：魔王能不能转岗成首席执政官？' },
-  perfectSpy: { id: 'perfectSpy', title: '完美卧底', typeTag: '卧底结局', tone: 'good', narration: '你成功让勇者队相信真正的魔王早已仓皇潜逃。三天后，人类王国通缉了你的副官，而你坐在王座上，认真考虑要不要给维克托涨点薪水。' },
-  victorBlamed: { id: 'victorBlamed', title: '副官背锅', typeTag: '甩锅结局', tone: 'warning', narration: '维克托被包装成真正幕后黑手被勇者队押走。他被押上马车时仍然热泪盈眶：“能替陛下背锅，是属下此生最高荣耀！”' },
-  actorKing: { id: 'actorKing', title: '影帝魔王', typeTag: '卧底结局', tone: 'warning', narration: '你几乎露馅了七次，但每一次都靠极其精湛的演技圆了回来。魔族史官写下：“陛下最伟大的战役不在战场，而在勇者队的日常语音里。”' },
-  absurdAscension: { id: 'absurdAscension', title: '荒诞飞升', typeTag: '荒诞结局', tone: 'mystic', narration: '勇者队、魔王军和人类王国最终共同成立地下城旅游开发公司。你因为“最懂双方需求”，顺理成章地当上了第一任董事长。' },
-  stalemate: { id: 'stalemate', title: '王座僵局', typeTag: '兜底结局', tone: 'warning', narration: '真相没有完全揭开，谎言也没有完全站住。勇者队在王座厅与你僵持到天亮，双方在沉默中达成了微妙的对峙平衡。' },
+  exposed: { id: 'exposed', title: '身份败露', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/black_holy_light.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '所有伪装在一瞬间崩塌。莱昂举剑对峙，伊薇特张开禁锢法阵，米拉难以置信地后退。你摘下银白头盔叹了口气：“好吧，讨伐会议提前开始。”' },
+  castleLost: { id: 'castleLost', title: '城在人亡', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/collapsed_ruins.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '你保住了魔王身份，却没能保住城堡。魔王城在战火中轰然倒塌，只剩王座和一间漏风的废墟。维克托建议将其改名为“极简主义魔王办公室”。' },
+  dualRuler: { id: 'dualRuler', title: '双面共主', typeTag: '和平结局', tone: 'good', bgImage: './assets/empty_throne_v.png', heroPortrait: './assets/char_aslan_knight.png', narration: '人类不完全信你，魔族也不完全理解你。但两边都不得不承认，只有你能把这场大战讲成一场可执行的和平框架。你成为了两界唯一的沟通桥梁。' },
+  redeemed: { id: 'redeemed', title: '被迫转正', typeTag: '和平结局', tone: 'good', bgImage: './assets/obsidian_balcony_v.png', heroPortrait: './assets/char_aslan.png', narration: '你原本只是想演个好人，结果演着演着真的不想毁灭世界了。莱昂邀请你加入新王国议会，你第一次认真思考：魔王能不能转岗成首席执政官？' },
+  perfectSpy: { id: 'perfectSpy', title: '完美卧底', typeTag: '卧底结局', tone: 'good', bgImage: './assets/start_poster_v.png', heroPortrait: './assets/char_aslan.png', narration: '你成功让勇者队相信真正的魔王早已仓皇潜逃。三天后，人类王国通缉了你的副官，而你坐在王座上，认真考虑要不要给维克托涨点薪水。' },
+  victorBlamed: { id: 'victorBlamed', title: '副官背锅', typeTag: '甩锅结局', tone: 'warning', bgImage: './assets/vanguard_corridor_v.png', heroPortrait: './assets/char_victor.png', narration: '维克托被包装成真正幕后黑手被勇者队押走。他被押上马车时仍然热泪盈眶：“能替陛下背锅，是属下此生最高荣耀！”' },
+  actorKing: { id: 'actorKing', title: '影帝魔王', typeTag: '卧底结局', tone: 'warning', bgImage: './assets/demon_castle_gate_v.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '你几乎露馅了七次，但每一次都靠极其精湛的演技圆了回来。魔族史官写下：“陛下最伟大的战役不在战场，而在勇者队的日常语音里。”' },
+  absurdAscension: { id: 'absurdAscension', title: '荒诞飞升', typeTag: '荒诞结局', tone: 'mystic', bgImage: './assets/demon_treasury_v.png', heroPortrait: './assets/char_locke.png', narration: '勇者队、魔王军和人类王国最终共同成立地下城旅游开发公司。你因为“最懂双方需求”，顺理成章地当上了第一任董事长。' },
+  stalemate: { id: 'stalemate', title: '王座僵局', typeTag: '兜底结局', tone: 'warning', bgImage: './assets/empty_throne_v.png', heroPortrait: './assets/char_aslan.png', narration: '真相没有完全揭开，谎言也没有完全站住。勇者队在王座厅与你僵持到天亮，双方在沉默中达成了微妙的对峙平衡。' },
 };
 
 // 5. 应用状态
@@ -876,7 +870,7 @@ function render() {
 }
 
 // ---------------------------------------------------------------------------
-// 1. 全屏 9:16 - 电影海报级全屏沉浸首屏
+// 1. 全屏 9:16 - 电影海报级全屏沉浸首屏 (去除所有 Emoji)
 // ---------------------------------------------------------------------------
 function renderStartView(root) {
   root.innerHTML = `
@@ -887,14 +881,14 @@ function renderStartView(root) {
       <div class="screen-content">
         <header class="title-header">
           <span class="game-tag-pill">What-If Life Simulator · 暗黑奇幻高概念剧本</span>
-          <h1 class="glow-title">假如我是勇者队伍里的卧底魔王</h1>
+          <h1 class="glow-title">假如我是爽文小说中的反派...</h1>
           <p class="tagline">“我是魔王本人，伪装成圣骑士混进勇者队。现在队伍已经打到了我的魔王城门口……”</p>
         </header>
 
         <div style="flex: 1;"></div>
 
         <section class="poster-brief-card">
-          <strong>👑 阿斯兰 · 卧底魔王潜伏契约</strong>
+          <strong>阿斯兰 · 卧底魔王潜伏契约</strong>
           <p>
             你带着勇者小队打到了自家魔王城大门口！5 位同伴各怀心思，每个场景都暗藏致命破绽与突发危机。自由输入聊天向同伴解释破绽，也可展开“💡 建议提示”寻找灵感。全凭你的智慧与口才撑到王座大殿！
           </p>
@@ -902,7 +896,7 @@ function renderStartView(root) {
 
         <footer class="bottom-action-bar" style="margin-top: 10px;">
           <button id="start-game-btn" class="glow-primary-btn pulse">
-            <span>💬 开启自由对话潜伏 (步步惊心 · 悬疑对戏)</span>
+            <span>开启自由对话潜伏 (步步惊心 · 悬疑对戏)</span>
           </button>
         </footer>
       </div>
@@ -916,7 +910,7 @@ function renderStartView(root) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. 全屏 9:16 - 游玩视图 (极简顶栏 + 旁白化场景破绽对戏)
+// 2. 全屏 9:16 - 游玩视图 (极简顶栏 + 慌张魔王形象与对戏)
 // ---------------------------------------------------------------------------
 function renderPlayView(root) {
   const scene = SCENE_TREE[appState.currentSceneKey] || SCENE_TREE.gate;
@@ -945,6 +939,16 @@ function renderPlayView(root) {
   const isLastDialogue = appState.dialogueIndex >= dialogueQueue.length - 1;
   const currentSpeaker = CHARACTERS[currentDialogue.characterId] || CHARACTERS.narrator;
 
+  // 判定魔王慌张/汗流浃背表情模式
+  const isPanickedEmotion =
+    currentDialogue.characterId === 'aslan' &&
+    /汗|慌|破绽|吐槽|纠结|私房钱|智障|离谱/.test(currentDialogue.emotion || '') ||
+    currentDialogue.emotion?.includes('🔥');
+
+  const speakerImage = isPanickedEmotion && currentSpeaker.panickedImage
+    ? currentSpeaker.panickedImage
+    : currentSpeaker.image;
+
   const targetKey = appState.transitionTargetKey || appState.currentSceneKey;
   const transScene = SCENE_TREE[targetKey] || scene;
 
@@ -971,11 +975,11 @@ function renderPlayView(root) {
       <div class="bg-canvas" style="background-image: url('${scene.bgImage || './assets/demon_castle_gate_v.png'}');"></div>
       <div class="bg-vignette-overlay"></div>
 
-      <!-- 2. 核心：透明背景抠图人物立绘 (如果是旁白发言则暂隐立绘，展现宏大场景) -->
+      <!-- 2. 核心：透明背景抠图人物立绘 (如果魔王慌张则叠加晃动与汗水特效) -->
       <div class="huge-character-stage">
         ${
-          currentSpeaker.image
-            ? `<img src="${currentSpeaker.image}" class="huge-character-portrait-img cutout-transparent" alt="${currentSpeaker.name}" />`
+          speakerImage
+            ? `<img src="${speakerImage}" class="huge-character-portrait-img cutout-transparent ${isPanickedEmotion ? 'panicked-portrait-img' : ''}" alt="${currentSpeaker.name}" />`
             : ''
         }
       </div>
@@ -983,7 +987,7 @@ function renderPlayView(root) {
       <!-- 3. 游玩 UI 层 -->
       <div class="screen-content play-content" id="play-screen-touch-area">
         
-        <!-- 极简顶部状态栏 (不再常驻大黑卡) -->
+        <!-- 极简顶部状态栏 -->
         <header class="minimal-top-bar">
           <div class="top-bar-left">
             <span class="act-badge">Act ${scene.act}/5</span>
@@ -992,7 +996,7 @@ function renderPlayView(root) {
           <button id="dev-stats-toggle" class="dev-icon-btn" title="查看隐性局势指标">⚙️ 局势</button>
         </header>
 
-        <!-- 局势与开发者监控 Popover -->
+        <!-- 局势监控 Popover -->
         ${
           appState.showDevStats
             ? `
@@ -1034,7 +1038,7 @@ function renderPlayView(root) {
             <div class="speaker-ribbon-badge">
               <strong class="speaker-ribbon-name" style="color: ${currentSpeaker.color};">${currentSpeaker.name}</strong>
               <span class="speaker-ribbon-tag">${currentSpeaker.tagIcon || '⚔️'} ${currentSpeaker.role}</span>
-              <span class="speaker-ribbon-emotion">· ${currentDialogue.emotion || '神态凝重'}</span>
+              <span class="speaker-ribbon-emotion">· ${currentDialogue.emotion || '神态凝重'} ${isPanickedEmotion ? '💧 (汗流浃背)' : ''}</span>
             </div>
 
             <div class="dialogue-card-body">
@@ -1062,7 +1066,7 @@ function renderPlayView(root) {
                 lastTurn
                   ? `
                 <button id="next-act-btn" class="glow-primary-btn pulse">
-                  <span>${lastTurn.nextSceneId ? '⚡ 转场 · 前往下一个地貌场景 ▶' : '🏆 查看终局因果结算 ▶'}</span>
+                  <span>${lastTurn.nextSceneId ? '⚡ 转场 · 前往下一个地貌场景 ▶' : '🏆 查看大结局终局因果特写 ▶'}</span>
                 </button>
               `
                   : `
@@ -1185,16 +1189,25 @@ function renderPlayView(root) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. 全屏 9:16 - 结算视图 (Result View)
+// 3. 全屏 9:16 - 结算视图 (含有专属背景图 + 角色大特写)
 // ---------------------------------------------------------------------------
 function renderResultView(root) {
   const ending = appState.ending || ENDINGS.stalemate;
   const causes = generateFateCauses(appState.stats, appState.flags, appState.history);
 
+  const bgImage = ending.bgImage || './assets/empty_throne_v.png';
+  const heroPortrait = ending.heroPortrait || './assets/char_aslan.png';
+
   root.innerHTML = `
     <main class="full-screen-app result-screen">
-      <div class="bg-canvas" style="background-image: url('./assets/empty_throne_v.png');"></div>
+      <!-- 专属结局背景图 -->
+      <div class="bg-canvas" style="background-image: url('${bgImage}');"></div>
       <div class="bg-vignette-overlay"></div>
+
+      <!-- 核心：大结局角色大特写舞台 -->
+      <div class="ending-portrait-stage">
+        <img src="${heroPortrait}" class="ending-hero-cutout cutout-transparent" alt="结局特写角色" />
+      </div>
 
       <div class="screen-content result-content">
         <header class="ending-header-box tone-${ending.tone}">
