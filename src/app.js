@@ -1103,9 +1103,9 @@ function renderPlayView(root) {
         <header class="minimal-top-bar">
           <div class="top-bar-left">
             <span class="act-badge">Act ${scene.act}/5</span>
-            <span class="location-badge">📍 ${scene.locationName || '魔王城'}</span>
+            <span class="location-badge">${scene.locationName || '魔王城'}</span>
           </div>
-          <button id="dev-stats-toggle" class="dev-icon-btn" title="查看隐性局势指标">⚙️ 局势</button>
+          <button id="dev-stats-toggle" class="dev-icon-btn" title="查看局势与设置">⚙️</button>
         </header>
 
         <!-- 局势监控 Popover -->
