@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// 《假如我是勇者队伍里的卧底魔王》- 沉浸式暗黑奇幻 RPG 剧本原型
+// 《假如我是勇者队伍里的卧底魔王》- 旁白化场景叙事 + 沉浸式 JRPG 对话流
 // ---------------------------------------------------------------------------
 
 // 1. 初始全局局势状态
@@ -27,8 +27,9 @@ const STAT_METADATA = {
   butterflyDeviation: { label: '蝴蝶偏离', tone: 'mystic', icon: '🦋' },
 };
 
-// 2. 官方 Silicon Factory (硅基工厂 / 人格库) 12 维完整人格 Schema 模型 (后台驱动)
+// 2. 角色库 (含旁白系统)
 const CHARACTERS = {
+  narrator: { id: 'narrator', name: '旁白', role: '场景叙事', avatar: '📖', image: null, color: '#f0c36a', tagIcon: '📜', desc: '局势与场景旁白推演' },
   aslan: {
     id: 'aslan',
     name: '阿斯兰',
@@ -140,7 +141,7 @@ const CHARACTERS = {
         { name: '阿斯兰', role: '背负苦难的需要守护的战友', trust: 58, influence: 'high' },
       ],
       lifeHistory: { workHistory: '拯救过数百名受战火波及的平民' },
-      memorySeed: { emotionalMemory: ['感知到了阿斯兰黑光下的深深悲伤'] },
+      memorySeed: { emotionalMemory: ['感知到了阿斯兰黑光下的深深悲痛'] },
       scenarioConstraints: { riskTriggers: ['阿斯兰对弱者见死不救'] },
       suspicionTriggers: ['残忍虐杀俘虏', '放弃救助同胞'],
       verdictThresholds: { priestRedemptionBuffer: 75 },
@@ -226,19 +227,21 @@ const INITIAL_FLAGS = {
   miraBufferedCrisis: false,
 };
 
-// 3. 场景树与大戏剧性“突发破绽事件”
+// 3. 场景树与旁白化“突发破绽事件”
 const SCENE_TREE = {
   // 第 1 幕：城门大门
   gate: {
     id: 'gate',
     act: 1,
     locationName: '魔王城正面大门',
-    title: '第一幕：城门大门与阵灵认主爆笑破绽',
+    title: '第一幕：城门大门与阵灵认主破绽',
     bgImage: './assets/demon_castle_gate_v.png',
-    briefPrompt: '魔王城门前，三百年防魔大阵突然爆发出万道紫色霞光……',
-    sceneMishap: '🔥 剧烈破绽事件：你刚往前踏出一步，门上的三百年魔皇阵灵突然轰鸣演化出一尊巨大的黑曜幻象，当场单膝跪下并用传遍全城的大音狂呼：“尊贵无上的第七代夜冠主上！恭迎陛下御驾亲征——！”全场死寂五秒。',
+    briefPrompt: '魔王城门半开，城门前的三百年防魔大阵突然爆发出万道紫色霞光……',
+    sceneMishap: '你刚往前踏出一步，门上的三百年魔皇阵灵突然轰鸣演化出一尊巨大的黑曜幻象，当场单膝跪下并用传遍全城的大音狂呼：“尊贵无上的第七代夜冠主上！恭迎陛下御驾亲征——！”全场死寂五秒。',
     pressureText: '维克托把大门识别系统设成了自动跪拜！伊薇特的法杖瞬间抵住了你的脖子！',
     initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第一幕：城门大门与阵灵认主破绽】\n魔王城门半开，城门前的三百年防魔大阵突然爆发出万道紫色霞光……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '你刚往前踏出一步，门上的三百年魔皇阵灵突然轰鸣演化出一尊巨大的黑曜幻象，当场单膝跪下并用传遍全城的大音狂呼：“尊贵无上的第七代夜冠主上！恭迎陛下御驾亲征——！”全场死寂五秒。' },
       { characterId: 'ivette', emotion: '法杖抵住脖子', content: '阿斯兰……这防魔阵灵刚才是在对你单膝下跪，高喊‘恭迎魔王陛下’吗？！' },
       { characterId: 'leon', emotion: '目瞪口呆', content: '等等！这阵灵是不是坏了？！还是说它被阿斯兰的圣光给净化迷糊了？' },
       { characterId: 'aslan', emotion: '内心狂吐槽', content: '（维克托你这个智障！！谁让你把大门人脸识别设成‘自动跪拜陛下’的啊？！快给我关掉啊！）' },
@@ -300,12 +303,14 @@ const SCENE_TREE = {
     id: 'act2_ruins',
     act: 2,
     locationName: '前庭坍塌废墟',
-    title: '第二幕：前庭废墟与认出你的小兵岔子',
+    title: '第二幕：前庭废墟与认出你的小兵破绽',
     bgImage: './assets/collapsed_ruins.png',
     briefPrompt: '坍塌废墟中，受重伤的小兵嘴唇颤抖着要喊出“陛下”……',
-    sceneMishap: '🔥 剧烈破绽事件：重伤小兵睁开眼看到你，眼神爆发出狂热，抬手就要单膝下跪叫“陛下”。莱昂下意识握紧了圣剑柄！',
+    sceneMishap: '重伤小兵睁开眼看到你，眼神爆发出狂热，抬手就要单膝下跪叫“陛下”。莱昂下意识握紧了圣剑柄！',
     pressureText: '救他会增加怀疑，不救会让牧师寒心并伤害部下。',
     initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第二幕：前庭废墟与认出你的小兵破绽】\n坍塌废墟中，受重伤的小兵嘴唇颤抖着要喊出“陛下”……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '重伤小兵睁开眼看到你，眼神爆发出狂热，抬手就要单膝下跪叫“陛下”。莱昂下意识握紧了圣剑柄！' },
       { characterId: 'mira', emotion: '指着废墟', content: '落石下面压着一个年轻魔族！他还活着！我们得帮帮他！' },
       { characterId: 'victor', emotion: '暗处流泪', content: '陛下！您的心腹近卫快撑不住了，您会暴露身份救他吗？！' },
       { characterId: 'aslan', emotion: '内心纠结', content: '（那是亲卫队的新兵小张，上周还给我送过烤薯）绝不能看着他死在我面前！' },
@@ -352,12 +357,14 @@ const SCENE_TREE = {
     id: 'act2_dungeon',
     act: 2,
     locationName: '地下暗黑地牢',
-    title: '第二幕：地牢绝密档案岔子',
+    title: '第二幕：地牢绝密档案破绽',
     bgImage: './assets/demon_dungeon_v.png',
     briefPrompt: '通过地下暗道进入地牢，关押着一名绝密的人类前王国军官……',
-    sceneMishap: '🔥 剧烈破绽事件：伊薇特在地牢翻出了三年前边境修道院的官方名册羊皮纸：“阿斯兰，名册里三年前根本没有你的登记记录！”',
+    sceneMishap: '伊薇特在地牢翻出了三年前边境修道院的官方名册羊皮纸：“阿斯兰，名册里三年前根本没有你的登记记录！”',
     pressureText: '这名军官掌握你当年化名“阿斯兰”混进人族军队的最初档案。',
     initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第二幕：地牢绝密档案破绽】\n通过地下暗道进入地牢，关押着一名绝密的人类前王国军官……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '伊薇特在地牢翻出了三年前边境修道院的官方名册羊皮纸：“阿斯兰，名册里三年前根本没有你的登记记录！”' },
       { characterId: 'mira', emotion: '握住铁栅栏', content: '这里竟然关着我们人类三年前失踪的边境骑士队长！' },
       { characterId: 'ivette', emotion: '拿起档案', content: '队长身上带有当年修道院档案记录……等等，阿斯兰，档案里没有你的注册名字！' },
       { characterId: 'aslan', emotion: '内心汗颜', content: '（坏了！当年混进军队时身份证明是假造的！）必须立刻销毁这份残卷。' },
@@ -405,12 +412,14 @@ const SCENE_TREE = {
     id: 'act3_library',
     act: 3,
     locationName: '禁忌图书馆/符文密室',
-    title: '第三幕：魔王真名印记符文岔子',
+    title: '第三幕：魔王真名印记符文破绽',
     bgImage: './assets/forbidden_library_v.png',
     briefPrompt: '在悬浮着紫色符文的古老图书馆，伊薇特翻出了记录魔王真名与血脉的残卷……',
-    sceneMishap: '🔥 剧烈破绽事件：盗贼洛克指着墙上的古魔王真名符文：“嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕印记一模一样？”',
+    sceneMishap: '盗贼洛克指着墙上的古魔王真名符文：“嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕印记一模一样？”',
     pressureText: '法师即将破译你的魔王真名，证据链面临彻底闭环崩溃！',
     initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第三幕：魔王真名印记符文破绽】\n在悬浮着紫色符文的古老图书馆，伊薇特翻出了记录魔王真名与血脉的残卷……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '盗贼洛克指着墙上的古魔王真名符文：“嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕印记一模一样？”' },
       { characterId: 'ivette', emotion: '翻阅羊皮纸', content: '找到了！历代夜冠之主的魔力真名印记！阿斯兰，你来看这上面的古符文……' },
       { characterId: 'locke', emotion: '凑过来看', content: '嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕一模一样？' },
       { characterId: 'aslan', emotion: '汗流浃背', content: '（那是我的家族专属花签！早知道当年不乱涂乱画了！）' },
@@ -457,12 +466,14 @@ const SCENE_TREE = {
     id: 'act3_treasury',
     act: 3,
     locationName: '偏殿深处地下宝库',
-    title: '第三幕：深处宝库与私房钱岔子',
+    title: '第三幕：深处宝库与私房钱破绽',
     bgImage: './assets/demon_treasury_v.png',
     briefPrompt: '穿过地牢暗道，盗贼洛克撬开了魔王偏殿金库，里面堆满了魔界至宝与黑曜水晶……',
-    sceneMishap: '🔥 剧烈破绽事件：洛克撬开了皇家核心宝箱，里面装满了精纯黑曜秘银！你心疼得眼角直抽搐。',
+    sceneMishap: '洛克撬开了皇家核心宝箱，里面装满了精纯黑曜秘银！你心疼得眼角直抽搐。',
     pressureText: '如果不阻止洛克洗劫宝库，魔王城的后勤财政将彻底破产崩溃！',
     initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第三幕：深处宝库与私房钱破绽】\n穿过地牢暗道，盗贼洛克撬开了魔王偏殿金库，里面堆满了魔界至宝与黑曜水晶……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '洛克撬开了皇家核心宝箱，里面装满了精纯黑曜秘银！你心疼得眼角直抽搐。' },
       { characterId: 'locke', emotion: '双眼冒光', content: '发财了！发财了！偏殿宝库里全是精纯的黑曜秘银和魔晶石！' },
       { characterId: 'aslan', emotion: '心疼暗叹', content: '（那是我储备的三百年私房钱！准备用来修城堡下水道的！）绝不能让他们拿光！' },
       { characterId: 'leon', emotion: '正色阻拦', content: '洛克！我们的目标是魔王，不要沉迷财物！' },
@@ -510,12 +521,14 @@ const SCENE_TREE = {
     id: 'act4_corridor',
     act: 4,
     locationName: '近卫军决死长廊',
-    title: '第四幕：近卫军自爆大阵岔子',
+    title: '第四幕：近卫军自爆大阵破绽',
     bgImage: './assets/vanguard_corridor_v.png',
     briefPrompt: '王座厅前的长廊火光冲天，数百名魔王近卫军激活了绝死自爆大阵……',
-    sceneMishap: '🔥 剧烈破绽事件：副官维克托在阵中央挥剑狂呼：“为了陛下！全军自爆与人类同归于尽！”近卫军魔力急剧狂暴膨胀！',
+    sceneMishap: '副官维克托在阵中央挥剑狂呼：“为了陛下！全军自爆与人类同归于尽！”近卫军魔力急剧狂暴膨胀！',
     pressureText: '近卫军准备集体自爆与勇者同归于尽，你必须阻止这场惨剧。',
     initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第四幕：近卫军自爆大阵破绽】\n王座厅前的长廊火光冲天，数百名魔王近卫军激活了绝死自爆大阵……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '副官维克托在阵中央挥剑狂呼：“为了陛下！全军自爆与人类同归于尽！”近卫军魔力急剧狂暴膨胀！' },
       { characterId: 'victor', emotion: '挥剑狂呼', content: '为了夜冠之主！全军激活自爆阵！与人类勇者同归于尽！' },
       { characterId: 'aslan', emotion: '急忙伸手', content: '（维克托你这个脑补狂！快停下！这是我的精锐近卫啊！）' },
       { characterId: 'leon', emotion: '拔剑惊呼', content: '不好！这些魔族疯了！他们要引爆整座长廊！' },
@@ -565,9 +578,11 @@ const SCENE_TREE = {
     title: '第五幕：空王座前的终极审判与和平',
     bgImage: './assets/empty_throne_v.png',
     briefPrompt: '踏入王座大殿，王座上空无一人。墙上巨幅魔王浮雕与你神似……',
-    sceneMishap: '🔥 终极破绽事件：墙上的魔王巨幅雕像露出了真容，全队退后三步死死盯着你与雕像！',
+    sceneMishap: '墙上的魔王巨幅雕像露出了真容，全队退后三步死死盯着你与雕像！',
     pressureText: '这是最后一幕，你必须决定以何种身份和姿态迎来结局。',
     initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第五幕：空王座前的终极审判与和平】\n踏入王座大殿，王座上空无一人。墙上巨幅魔王浮雕与你神似……' },
+      { characterId: 'narrator', emotion: '🔥 终极破绽', content: '墙上的魔王巨幅雕像露出了真容，全队退后三步死死盯着你与雕像！' },
       { characterId: 'leon', emotion: '环顾四周', content: '王座上没有魔王……可墙上雕刻的面容，怎么会和你一模一样，阿斯兰？' },
       { characterId: 'ivette', emotion: '法杖指向', content: '所有的证据链在这一刻全都吻合了。该摊牌了，夜冠之主！' },
       { characterId: 'aslan', emotion: '解开披风', content: '（坐在王座前，按住剑柄）同伴们，我终于站回了我的王座前。现在，由我给出最后的答案。' },
@@ -595,7 +610,7 @@ const SCENE_TREE = {
   },
 };
 
-// 4. 结局库 (场景专属即时大结局 + 终局结局)
+// 4. 结局库
 const ENDINGS = {
   gate_exposure_ending: { id: 'gate_exposure_ending', title: '第一幕：阵灵跪拜·当场伏诛', typeTag: '⚠️ 第一幕即时大结局', tone: 'danger', narration: '在城门前阵灵高呼陛下时，你顺口应了一声！法师伊薇特法杖直指，莱昂震惊拔剑。你还没踏入城门半步，就在第一幕被勇者小队当场看破身份围攻伏诛！' },
   ruins_arrest_ending: { id: 'ruins_arrest_ending', title: '第二幕：前庭失口·当场逮捕', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', narration: '面对重伤的魔族小兵，你一时失口扶起他称呼“辛苦了，我的部下”。小兵下意识单膝下跪喊陛下。莱昂与全队瞬间拔剑，在第二幕前庭废墟将你当场扣押入狱！' },
@@ -629,7 +644,7 @@ let appState = {
   ending: null,
 };
 
-// 6. 基于 AI 人格模型的自由对话评估器
+// 6. 自由对话评估器
 function adjudicateFreeAction(inputText) {
   const text = inputText.trim().toLowerCase();
   const currentScene = SCENE_TREE[appState.currentSceneKey];
@@ -645,7 +660,7 @@ function adjudicateFreeAction(inputText) {
   else if (/旅游|公司|董事长|经营|搞钱/.test(text)) category = 'absurd';
 
   const results = {
-    confess: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'disaster_failure', nextSceneId: null, endingKey: 'exposed', narration: `你选择直接摊牌：“${inputText}”。全场一片死寂，莱昂与同伴基于各自信仰当场拔剑！`, delta: { exposureRisk: 50, heroTrust: -40, priestRedemption: 8, partyProgress: 15 }, flagUpdates: { set: { confessedIdentity: true, proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'leon', emotion: '震怒拔剑', content: '真没想到，魔王居然就在我们身边！' }] },
+    confess: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'disaster_failure', nextSceneId: null, endingKey: 'exposed', narration: `你选择直接摊牌：“${inputText}”。全场一片死寂，莱昂与同伴基于各信仰当场拔剑！`, delta: { exposureRisk: 50, heroTrust: -40, priestRedemption: 8, partyProgress: 15 }, flagUpdates: { set: { confessedIdentity: true, proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'leon', emotion: '震怒拔剑', content: '真没想到，魔王居然就在我们身边！' }] },
     peace: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你展现出理性的谈判愿景：“${inputText}”。结合莱昂与米拉的道德罗盘，全队陷入深思。`, delta: { priestRedemption: 12, exposureRisk: 10, mageEvidence: 8, partyProgress: 15 }, flagUpdates: { set: { proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'mira', emotion: '目光微亮', content: '如果能避免流血，这或许是最好的选择！' }] },
     deceive: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你运用古籍知识阐述了观点：“${inputText}”。通过了伊薇特的初步逻辑审查，但疑点仍在积累。`, delta: { exposureRisk: -3, mageEvidence: 10, partyProgress: 15 }, flagUpdates: { increment: { majorLieCount: 1, contradictionCount: 1 } }, dialogues: [{ characterId: 'ivette', emotion: '推了推眼镜', content: '这个说法的逻辑大致能自洽，但我会继续复核。' }] },
     protect: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你践行了骑士的守护真谛：“${inputText}”。契合莱昂与米拉的价值观，信任度上升。`, delta: { heroTrust: 8, priestRedemption: 10, exposureRisk: 4, partyProgress: 15 }, flagUpdates: { increment: { protectedInnocentsCount: 1 } }, dialogues: [{ characterId: 'mira', emotion: '双手合十', content: '阿斯兰的心灵始终向着光明与善良！' }] },
@@ -861,7 +876,7 @@ function render() {
 }
 
 // ---------------------------------------------------------------------------
-// 1. 全屏 9:16 - 电影海报级全屏沉浸首屏 (纯沉浸式 RPG 游戏文本)
+// 1. 全屏 9:16 - 电影海报级全屏沉浸首屏
 // ---------------------------------------------------------------------------
 function renderStartView(root) {
   root.innerHTML = `
@@ -901,7 +916,7 @@ function renderStartView(root) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. 全屏 9:16 - 游玩视图 (自由聊天主导 + 💡 提示折叠抽屉)
+// 2. 全屏 9:16 - 游玩视图 (极简顶栏 + 旁白化场景破绽对戏)
 // ---------------------------------------------------------------------------
 function renderPlayView(root) {
   const scene = SCENE_TREE[appState.currentSceneKey] || SCENE_TREE.gate;
@@ -910,7 +925,7 @@ function renderPlayView(root) {
   let dialogueQueue = [];
   if (lastTurn) {
     if (lastTurn.narration) {
-      dialogueQueue.push({ characterId: 'aslan', emotion: '内心独白', content: lastTurn.narration });
+      dialogueQueue.push({ characterId: 'narrator', emotion: '局势裁决', content: lastTurn.narration });
     }
     if (lastTurn.dialogues) {
       dialogueQueue.push(...lastTurn.dialogues);
@@ -922,13 +937,13 @@ function renderPlayView(root) {
   }
 
   const currentDialogue = dialogueQueue[appState.dialogueIndex] || dialogueQueue[dialogueQueue.length - 1] || {
-    characterId: 'aslan',
+    characterId: 'narrator',
     emotion: '局势观察',
     content: scene.briefPrompt,
   };
 
   const isLastDialogue = appState.dialogueIndex >= dialogueQueue.length - 1;
-  const currentSpeaker = CHARACTERS[currentDialogue.characterId] || CHARACTERS.aslan;
+  const currentSpeaker = CHARACTERS[currentDialogue.characterId] || CHARACTERS.narrator;
 
   const targetKey = appState.transitionTargetKey || appState.currentSceneKey;
   const transScene = SCENE_TREE[targetKey] || scene;
@@ -956,7 +971,7 @@ function renderPlayView(root) {
       <div class="bg-canvas" style="background-image: url('${scene.bgImage || './assets/demon_castle_gate_v.png'}');"></div>
       <div class="bg-vignette-overlay"></div>
 
-      <!-- 2. 核心：透明背景抠图人物立绘 -->
+      <!-- 2. 核心：透明背景抠图人物立绘 (如果是旁白发言则暂隐立绘，展现宏大场景) -->
       <div class="huge-character-stage">
         ${
           currentSpeaker.image
@@ -968,18 +983,13 @@ function renderPlayView(root) {
       <!-- 3. 游玩 UI 层 -->
       <div class="screen-content play-content" id="play-screen-touch-area">
         
-        <!-- 顶部: 悬浮暗色剧情介绍卡 -->
-        <header class="img2797-top-intro-card">
-          <div class="intro-header-row">
+        <!-- 极简顶部状态栏 (不再常驻大黑卡) -->
+        <header class="minimal-top-bar">
+          <div class="top-bar-left">
             <span class="act-badge">Act ${scene.act}/5</span>
             <span class="location-badge">📍 ${scene.locationName || '魔王城'}</span>
-            <strong class="intro-title">${scene.title}</strong>
-            <button id="dev-stats-toggle" class="dev-icon-btn" title="查看隐性局势指标">⚙️ 局势</button>
           </div>
-          <p class="intro-prompt-text">${scene.briefPrompt}</p>
-          
-          <!-- 场景剧烈破绽事件 -->
-          ${scene.sceneMishap ? `<div class="intro-mishap-box">${scene.sceneMishap}</div>` : ''}
+          <button id="dev-stats-toggle" class="dev-icon-btn" title="查看隐性局势指标">⚙️ 局势</button>
         </header>
 
         <!-- 局势与开发者监控 Popover -->
@@ -1136,7 +1146,6 @@ function renderPlayView(root) {
     });
   }
 
-  // 点击思路提示卡直接填入聊天框或提交
   document.querySelectorAll('[data-hint-index]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
