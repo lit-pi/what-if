@@ -2,7 +2,8 @@
 
 - **文档名称**：`spec-review-gm-matrix-and-character-red-lines.md`
 - **评审日期**：2026-07-24
-- **评审状态**：已通过（带落地补充要求）
+- **评审状态**：历史评审参考（已吸收主要补充要求；不高于 Runtime v1 权威规格）
+- **后续处理**：已根据本报告与分身评审补充 Runtime v1/v1.1 边界，统一 LLM schema，并补充 `commandVictorSuccess` 旗标。
 - **评审对象**：
   1. [`docs/specs/gm-adjudication-system-v1.md`](file:///Users/coding-pi/Documents/Workspaces/Main/Lit-Pi/what-if/docs/specs/gm-adjudication-system-v1.md) (v1.0)
   2. [`docs/specs/scene-adjudication-matrix-v1.md`](file:///Users/coding-pi/Documents/Workspaces/Main/Lit-Pi/what-if/docs/specs/scene-adjudication-matrix-v1.md) (v1.0)
@@ -12,7 +13,7 @@
 
 ## 1. 评审结论概述 (Executive Summary)
 
-经过对以上三份规格文档的联合比对与代码可行性审查，**评审结论为：整体通过，可直接作为下阶段核心系统代码实装与单元测试的基线标准。**
+经过对以上三份规格文档的联合比对与代码可行性审查，**评审结论为：整体通过，但本文档只作为历史评审参考。后续实现以 Runtime v1、LLM 架构 v1、GM 裁决 v1、角色底线 v1 和场景矩阵 v1 为准。**
 
 三份规格成功构建了下游 What-If Life Simulator 核心体验的技术闭环：
 - **双引擎分工明确**：LLM 专注自由对话生成与意图建议；JS 运行时（Runtime）掌握数值裁剪 `[0, 100]`、旗标更新与确定性结局判定。
@@ -53,7 +54,7 @@
 ### 3.3 Act 5 结局校验中的红线优先拦截链 (Priority Order)
 - **问题描述**：在第五幕（`act5_throne`）进行结局判定时，若先判断结局阈值再判断红线，可能导致命中红线的玩家仍误入好结局。
 - **落地要求**：结局评估流程必须为：
-  `verifyCharacterRedLines(stats, flags)` -> 若有违例 -> 阻断 `dualRuler` / `redeemed` / `perfectSpy` -> 回退到 `confrontation_hard_fail` 或 `stalemate`（王座僵局）。
+  `verifyCharacterRedLines(stats, flags)` -> 若有违例 -> 阻断 `dualRuler` / `redeemed` / `perfectSpy` -> 回退到 Runtime v1 已存在的 `exposed`、`instantArrest` 或 `stalemate`。不要引用不存在的结局 key。
 
 ### 3.4 降级机制（Fallback Protocol）
 - **问题描述**：当 LLM 接口超时或返回非法 JSON 时，必须零感知回退。
@@ -67,7 +68,7 @@
 ```javascript
 /**
  * 校验玩家当前状态是否触碰 companion 角色的不可逾越底线
- * @param {Object} stats 当前五维数值
+ * @param {Object} stats 当前 Runtime v1 九个状态数值
  * @param {Object} flags 当前全局旗标
  * @returns {Array} 违例红线列表
  */

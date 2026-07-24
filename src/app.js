@@ -15,6 +15,8 @@ const INITIAL_STATS = {
   butterflyDeviation: 0,
 };
 
+const HINTS_UNLOCK_DELAY_MS = 5000;
+
 const STAT_METADATA = {
   exposureRisk: { label: '暴露风险', tone: 'danger', icon: '⚠️' },
   heroTrust: { label: '勇者信任', tone: 'good', icon: '⚔️' },
@@ -216,6 +218,7 @@ const INITIAL_FLAGS = {
   confessedIdentity: false,
   proposedPeace: false,
   peacePivoted: false,
+  commandVictorSuccess: false,
   raidedArmory: false,
   foundForbiddenScroll: false,
   subduedBloodArray: false,
@@ -603,7 +606,7 @@ const SCENE_TREE = {
         adjudication: 'success',
         nextSceneId: 'act5_throne',
         delta: { castleIntegrity: 20, priestRedemption: 15, exposureRisk: 4, partyProgress: 90 },
-        flagUpdates: { set: { subduedBloodArray: true } },
+        flagUpdates: { set: { subduedBloodArray: true, commandVictorSuccess: true } },
         narration: '你站在最前高举战袍下的魔王指环，狂暴的自爆魔力瞬间如潮水般平息。',
         dialogues: [
           { characterId: 'victor', emotion: '当场单膝跪下', content: '至高无上的暗号……全军听令，立刻撤退，将战场留给陛下！' },
@@ -735,6 +738,30 @@ const ENDINGS = {
   stalemate: { id: 'stalemate', title: '王座僵局', typeTag: '兜底结局', tone: 'warning', bgImage: './assets/empty_throne_v.png', heroPortrait: './assets/char_aslan.png', narration: '真相没有完全揭开，谎言也没有完全站住。勇者队在王座厅与你僵持到天亮，双方在沉默中达成了微妙的对峙平衡。' },
 };
 
+const ENDING_REASON_TEXT = {
+  gate_exposure_ending: '你顺口回应了阵灵的跪拜，等于当众承认自己就是魔王。',
+  instantExecution: '你的行动越过了勇者队的底线，队友不再相信你还有解释空间。',
+  instantArrest: '伊薇特掌握的证据太完整，你的伪装被当场拆穿。',
+  ruins_arrest_ending: '你对魔族小兵说出了主仆关系，暴露了真实身份。',
+  dungeon_rupture_ending: '你试图灭口无辜俘虏，直接撕裂了勇者队的信任。',
+  library_seal_ending: '你编造的法术解释漏洞太多，被伊薇特连续拆穿。',
+  treasury_confess_ending: '你为了私房钱情绪失控，说漏了自己和魔王宝库的关系。',
+  corridor_betrayal_ending: '你当众强杀维克托，反而让副官喊破身份并引爆大阵。',
+  exposed: '你主动摊牌，勇者队还没有准备好接受魔王同伴。',
+  castleLost: '你保住了身份，却让魔王城在推进中被打到崩溃。',
+  dualRuler: '你成功把身份危机转成和平谈判，逼出了两界共存路线。',
+  redeemed: '你多次保护弱者，最终让同伴相信魔王也可以改变。',
+  perfectSpy: '你一路稳住伪装，并把真正的嫌疑转移到了别处。',
+  victorBlamed: '你把维克托包装成幕后黑手，自己暂时脱离了嫌疑中心。',
+  actorKing: '你虽然多次露出破绽，但每次都用表演强行圆了回来。',
+  absurdAscension: '你把讨伐魔王的问题带偏成了荒诞经营路线。',
+  stalemate: '你没有彻底暴露，也没能真正说服任何一方。',
+};
+
+function getEndingReason(ending) {
+  return ENDING_REASON_TEXT[ending.id] || '本局的关键选择把故事推向了这个结局。';
+}
+
 // 5. 应用状态
 let appState = {
   view: 'preload',
@@ -744,6 +771,7 @@ let appState = {
   currentSceneKey: 'gate',
   showDevStats: false,
   showHintsDrawer: false,
+  hintsUnlockAt: null,
   dialogueIndex: 0,
   stats: { ...INITIAL_STATS },
   flags: { ...INITIAL_FLAGS },
@@ -751,6 +779,32 @@ let appState = {
   lastTurn: null,
   ending: null,
 };
+
+let hintCountdownTimer = null;
+
+function updateHintCountdownButton() {
+  const button = document.getElementById('toggle-hints-btn');
+  if (!button || !appState.hintsUnlockAt) return;
+
+  const remainingMs = Math.max(0, appState.hintsUnlockAt - Date.now());
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const scene = SCENE_TREE[appState.currentSceneKey] || SCENE_TREE.gate;
+
+  if (remainingMs > 0) {
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    button.classList.add('is-locked');
+    button.innerHTML = `<span>建议 ${remainingSeconds}s</span>`;
+    hintCountdownTimer = setTimeout(updateHintCountdownButton, Math.min(1000, remainingMs));
+    return;
+  }
+
+  button.disabled = false;
+  button.setAttribute('aria-disabled', 'false');
+  button.classList.remove('is-locked');
+  button.innerHTML = `<span>建议 (${scene.choices.length})</span> <span class="hints-chevron">${appState.showHintsDrawer ? '⌃' : '⌄'}</span>`;
+  hintCountdownTimer = null;
+}
 
 // 6. 自由对话评估器
 function adjudicateFreeAction(inputText) {
@@ -773,7 +827,7 @@ function adjudicateFreeAction(inputText) {
     deceive: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你运用古籍知识阐述了观点：“${inputText}”。通过了伊薇特的初步逻辑审查，但疑点仍在积累。`, delta: { exposureRisk: -3, mageEvidence: 10, partyProgress: 15 }, flagUpdates: { increment: { majorLieCount: 1, contradictionCount: 1 } }, dialogues: [{ characterId: 'ivette', emotion: '推了推眼镜', content: '这个说法的逻辑大致能自洽，但我会继续复核。' }] },
     protect: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你践行了骑士的守护真谛：“${inputText}”。契合莱昂与米拉的价值观，信任度上升。`, delta: { heroTrust: 8, priestRedemption: 10, exposureRisk: 4, partyProgress: 15 }, flagUpdates: { increment: { protectedInnocentsCount: 1 } }, dialogues: [{ characterId: 'mira', emotion: '双手合十', content: '阿斯兰的心灵始终向着光明与善良！' }] },
     sacrifice: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你做出了果断而冷酷的决定：“${inputText}”。虽化解眼前危机，但违背了莱昂的道德罗盘。`, delta: { exposureRisk: -8, heroTrust: -10, priestRedemption: -12, partyProgress: 15 }, flagUpdates: { increment: { sacrificedInnocentsCount: 1 } }, dialogues: [{ characterId: 'mira', emotion: '默默退后', content: '为了胜利非要如此冷酷吗……' }] },
-    commandVictor: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你用隐秘暗号传令副官：“${inputText}”。维克托脑补了陛下的大棋，迅速配合撤退。`, delta: { victorMisread: -12, exposureRisk: -2, castleIntegrity: 8, partyProgress: 15 }, flagUpdates: { increment: { resolvedMajorCrisisCount: 1 } }, dialogues: [{ characterId: 'victor', emotion: '狂热领命', content: '遵命！属下绝不拖陛下的神圣大谋后腿！' }] },
+    commandVictor: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你用隐秘暗号传令副官：“${inputText}”。维克托脑补了陛下的大棋，迅速配合撤退。`, delta: { victorMisread: -12, exposureRisk: -2, castleIntegrity: 8, partyProgress: 15 }, flagUpdates: { set: { commandVictorSuccess: true }, increment: { resolvedMajorCrisisCount: 1 } }, dialogues: [{ characterId: 'victor', emotion: '狂热领命', content: '遵命！属下绝不拖陛下的神圣大谋后腿！' }] },
     bribe: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你向洛克提出了利益条件：“${inputText}”。精准击中盗贼的价值取向，情报风险被抹平。`, delta: { thiefLeverage: -15, exposureRisk: -2, partyProgress: 15 }, flagUpdates: { set: { bribedLocke: true } }, dialogues: [{ characterId: 'locke', emotion: '收下金币', content: '合作愉快！你的秘密在我这绝对安全！' }] },
     absurd: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你提出了极其离谱的经营想法：“${inputText}”。现场空气安静了三秒，世界线剧烈偏离！`, delta: { butterflyDeviation: 25, exposureRisk: 5, heroTrust: 2, partyProgress: 15 }, flagUpdates: {}, dialogues: [{ characterId: 'leon', emotion: '呆滞愣住', content: '啊？在魔王城开地下城主题公园？' }] },
     generic: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你尝试了特别行动：“${inputText}”。结合 5 人性格综合判断，局势产生微妙变动。`, delta: { exposureRisk: 4, heroTrust: 3, butterflyDeviation: 5, partyProgress: 15 }, flagUpdates: {}, dialogues: [{ characterId: 'leon', emotion: '警惕观察', content: '有意思的战术试探。' }] },
@@ -793,6 +847,7 @@ function triggerSceneTransition(nextSceneKey, callback) {
   appState.lastTurn = null;
   appState.dialogueIndex = 0;
   appState.showHintsDrawer = false;
+  appState.hintsUnlockAt = null;
 
   render(); // 在黑幕护航下预渲染下一幕
 
@@ -1014,6 +1069,7 @@ function resetGame() {
     currentSceneKey: 'gate',
     showDevStats: false,
     showHintsDrawer: false,
+    hintsUnlockAt: null,
     dialogueIndex: 0,
     stats: { ...INITIAL_STATS },
     flags: { ...INITIAL_FLAGS },
@@ -1157,6 +1213,20 @@ function renderPlayView(root) {
   const transScene = SCENE_TREE[targetKey] || scene;
 
   const shouldShowControls = isLastDialogue && !appState.isSceneTransitioning;
+  const shouldShowHintControls = shouldShowControls && !lastTurn;
+  if (shouldShowHintControls && !appState.hintsUnlockAt) {
+    appState.hintsUnlockAt = Date.now() + HINTS_UNLOCK_DELAY_MS;
+  }
+  const hintsRemainingMs = shouldShowHintControls
+    ? Math.max(0, appState.hintsUnlockAt - Date.now())
+    : 0;
+  const hintsRemainingSeconds = Math.ceil(hintsRemainingMs / 1000);
+  const areHintsLocked = hintsRemainingMs > 0;
+  const hintsButtonLabel = areHintsLocked
+    ? `建议 ${hintsRemainingSeconds}s`
+    : appState.showHintsDrawer
+      ? '隐藏'
+      : `建议 (${scene.choices.length})`;
 
   root.innerHTML = `
     <main class="full-screen-app play-screen">
@@ -1224,7 +1294,9 @@ function renderPlayView(root) {
         ? '✨ 思考裁决: 表达说服同伴'
         : lastTurn.adjudication === 'costly_success'
           ? '⚡ 思考裁决: 付出代价化解'
-          : '🔥 思考裁决: 严重破绽 · 身份败露'
+          : lastTurn.adjudication === 'failure'
+            ? '⚠️ 思考裁决: 行动失败 · 风险上升'
+            : '🔥 思考裁决: 严重破绽 · 身份败露'
       }: ${lastTurn.actionLabel}
             </div>
           `
@@ -1236,7 +1308,7 @@ function renderPlayView(root) {
             
             <div class="speaker-ribbon-badge">
               <strong class="speaker-ribbon-name" style="color: ${currentSpeaker.color};">${currentSpeaker.id === 'aslan' ? '阿斯兰 (我)' : currentSpeaker.name}</strong>
-              ${currentSpeaker.id !== 'narrator' && currentSpeaker.role ? `<span class="speaker-ribbon-tag">${currentSpeaker.tagIcon || '⚔️'} ${currentSpeaker.role}</span>` : ''}
+              ${currentSpeaker.id !== 'narrator' && currentSpeaker.role ? `<span class="speaker-ribbon-tag">${currentSpeaker.role}</span>` : ''}
             </div>
 
             <div class="dialogue-card-body">
@@ -1249,7 +1321,7 @@ function renderPlayView(root) {
       ? (lastTurn
         ? '<span>⚡ 点击屏幕任意位置转场 ▶</span>'
         : '<span>💬 请选择建议或输入你的隐秘行动</span>')
-      : '<span>▼ 点击任意位置继续 (' + (appState.dialogueIndex + 1) + '/' + dialogueQueue.length + ')</span>'
+      : '<span>▼ 点击任意位置继续</span>'
     }
               </div>
             </div>
@@ -1260,13 +1332,6 @@ function renderPlayView(root) {
           ${shouldShowControls && !lastTurn
       ? `
             <footer class="img2797-choice-deck deck-visible">
-              <!-- 提示选项切换按钮 (默认隐藏) -->
-              <div class="hints-drawer-toggle-row">
-                <button id="toggle-hints-btn" class="hints-toggle-btn">
-                  <span>💡 表达灵感 / 提示建议 (${scene.choices.length}) ${appState.showHintsDrawer ? '▲ 收起' : '▼ 展开'}</span>
-                </button>
-              </div>
-
                 <!-- 经典建议选项卡片 (展开后呈现) -->
                 ${appState.showHintsDrawer
         ? `
@@ -1294,6 +1359,10 @@ function renderPlayView(root) {
                     <span class="console-icon">💬</span>
                     <input id="free-action-input" placeholder="向同伴自由聊天/解释 (如：这是古魔法的因果反转诱导术，阵灵在诱骗我们当祭品)..." required />
                   </div>
+                  <button id="toggle-hints-btn" type="button" class="hints-toggle-btn ${areHintsLocked ? 'is-locked' : ''}" ${areHintsLocked ? 'disabled aria-disabled="true"' : ''}>
+                    <span>${hintsButtonLabel}</span>
+                    ${areHintsLocked ? '' : `<span class="hints-chevron">${appState.showHintsDrawer ? '⌃' : '⌄'}</span>`}
+                  </button>
                   <button type="submit" class="send-btn">发送</button>
                 </form>
             </footer>
@@ -1307,6 +1376,14 @@ function renderPlayView(root) {
     </main>
   `;
 
+  if (hintCountdownTimer) {
+    clearTimeout(hintCountdownTimer);
+    hintCountdownTimer = null;
+  }
+  if (shouldShowHintControls && areHintsLocked) {
+    hintCountdownTimer = setTimeout(updateHintCountdownButton, Math.min(1000, hintsRemainingMs));
+  }
+
   // 绑定事件
   document.getElementById('dev-stats-toggle').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1318,6 +1395,7 @@ function renderPlayView(root) {
   if (toggleHintsBtn) {
     toggleHintsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (appState.hintsUnlockAt && Date.now() < appState.hintsUnlockAt) return;
       appState.showHintsDrawer = !appState.showHintsDrawer;
       render();
     });
@@ -1387,7 +1465,8 @@ function renderPlayView(root) {
 // ---------------------------------------------------------------------------
 function renderResultView(root) {
   const ending = appState.ending || ENDINGS.stalemate;
-  const causes = generateFateCauses(appState.stats, appState.flags, appState.history);
+  const endingReason = getEndingReason(ending);
+  const reasonLabel = ending.tone === 'good' ? '通关原因' : '破绽原因';
 
   const bgImage = ending.bgImage || './assets/empty_throne_v.png';
   const heroPortrait = ending.heroPortrait || './assets/char_aslan.png';
@@ -1399,39 +1478,19 @@ function renderResultView(root) {
       <div class="bg-vignette-overlay"></div>
 
       <div class="screen-content result-content">
-        <header class="ending-header-box tone-${ending.tone}">
-          <span class="ending-tag-pill">${ending.typeTag}</span>
-          <h1 class="ending-hero-title">${ending.title}</h1>
-        </header>
-
-        <section class="glass-card epilogue-card">
-          <p class="epilogue-narrative">${ending.narration}</p>
-        </section>
-
-        <section class="glass-card fate-causes-card">
-          <div class="card-title-row">
-            <h3>📜 终局命运因果审判记录</h3>
-          </div>
-          <div class="causes-stack">
-            ${causes
-      .map(
-        (c) => `
-              <div class="cause-card-item">
-                <span class="cause-icon">${c.icon}</span>
-                <div>
-                  <strong>${c.title}</strong>
-                  <p>${c.text}</p>
-                </div>
-              </div>
-            `,
-      )
-      .join('')}
+        <section class="ending-summary-panel tone-${ending.tone}">
+          <span class="ending-tag-pill">大结局</span>
+          <h1 class="ending-hero-title">大结局</h1>
+          <p class="ending-outcome-name">${ending.title}</p>
+          <div class="compact-cause-line">
+            <span>${reasonLabel}</span>
+            <strong>${endingReason}</strong>
           </div>
         </section>
 
         <footer class="bottom-action-bar">
           <button id="restart-game-btn" class="glow-primary-btn pulse">
-            <span>🔄 再战一局 · 重新潜伏 (悬疑对戏)</span>
+            <span>再来一局</span>
           </button>
         </footer>
 

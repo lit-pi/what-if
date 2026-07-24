@@ -1,111 +1,234 @@
-# 大模型（LLM）剧情裁决与多 Agent 推进架构设计规范
+# LLM 剧情裁决与 GM 推进架构 v1
 
-> **项目**: What-If Life Simulator (`lit-pi/what-if`)  
-> **模块**: 剧本运行时 (Game Runtime) & 硅基工厂 (Silicon Factory) 上游适配接口  
-> **目标**: 在保留确定性规则与 0-100 数值防爆的前提下，引入 LLM 自由对话裁决与多 Agent 动态剧情推进。
+项目：What-If Life Simulator (`lit-pi/what-if`)  
+剧本：`undercover-demon-king`  
+状态：机制合同草稿，可进入本地 adapter + validator 原型  
+权威基线：`docs/specs/undercover-demon-king-runtime-v1.md`
 
----
+## 1. 目标
 
-## 1. 架构总览：混合双引擎模式 (Hybrid Dual-Engine Architecture)
+页面 demo 基本冻结后，LLM 的下一步目标不是替代游戏运行时，而是增强自由行动体验：
 
-为了保证游戏**既具有 LLM 的极致无限自由表达空间，又具备确定性游戏的关卡卡点、结局收敛与 QA 可测性**，系统采用**“确定性状态机 + 动态 LLM 裁决器”**的混合架构。
+- 理解玩家自由文本。
+- 生成 GM 旁白。
+- 生成符合角色维度和压力状态的短对白。
+- 给出候选行动分类、候选状态变化和候选触发规则。
+
+最终数值、旗标、场景推进和结局仍由本地运行时决定。
+
+## 2. 双引擎分工
 
 ```mermaid
 flowchart TD
-    A[玩家自由文本 / 选定选项] --> B[LLM 裁决与多 Agent 模拟器]
-    C[当前场景 Prompt & 破绽事件] --> B
-    D[硅基工厂 Persona 12-Dim 人格包] --> B
-    E[当前数值向量 S & Flag 集合] --> B
-
-    B -->|生成结构化 JSON| F[结构化裁决协议 Validator]
-    F -->|状态增量 ΔS & 动态对话| G[确定性运行时状态机]
-    
-    G -->|裁剪 0-100 & 旗标更新| H[结局优先级裁决引擎]
-    H -->|触发结局| I[结局结算页]
-    H -->|未触发结局| J[平滑转场推演至下一场景]
+    A[玩家预设选择或自由文本] --> B[本地 GM 输入打包]
+    B --> C[LLM 裁决助手]
+    C --> D[Adjudication Validator]
+    D -->|合法候选| E[确定性 Runtime]
+    D -->|非法/超时| F[本地 fallback 裁决]
+    F --> E
+    E --> G[0-100 数值裁剪]
+    G --> H[红线与结局优先级]
+    H --> I[结果页或下一场景]
 ```
 
----
+LLM 是“候选生成器”，Runtime 是“裁决者”。
 
-## 2. LLM 结构化裁决协议 (Structured Adjudication Schema)
+## 3. 权威规则来源
 
-LLM 不直接控制画面渲染，而是通过 JSON Schema 模式输出标准化裁决数据包：
+- `docs/specs/undercover-demon-king-runtime-v1.md`：当前 5 Act、7 场景、9 状态、旗标、17 结局对象与 Runtime v1 优先级。
+- `docs/specs/gm-adjudication-system-v1.md`：自由行动分类、裁决流程、状态变化范围。
+- `docs/specs/character-pressure-and-red-lines-v1.md`：角色压力、红线、结局底线。
+- `docs/specs/scene-adjudication-matrix-v1.md`：每个场景允许什么、禁止什么、如何转场。
+
+当文档冲突时，优先级为：
+
+1. `src/app.js` 当前可运行行为。
+2. `undercover-demon-king-runtime-v1.md`。
+3. GM、角色红线、场景矩阵三份机制文档。
+4. 旧剧本文档和交接总结。
+
+## 4. Runtime v1 硬边界
+
+LLM 不拥有以下权限：
+
+- 不决定最终结局。
+- 不跳转到不存在的场景。
+- 不生成新的状态字段或旗标。
+- 不绕过 `0-100` 数值裁剪。
+- 不绕过 Runtime v1 即时硬失败阈值：`exposureRisk >= 75` 或 `mageEvidence >= 65`。
+- 不覆盖角色红线。
+- 不让玩家一句话解决整局或跳过当前破绽。
+
+Runtime 必须保留 fallback：LLM 超时、异常、返回非法 JSON 或 schema 不通过时，使用本地规则裁决，保证静态 demo 仍可玩。
+
+## 5. LLM 裁决响应 v1
+
+后续实现只应使用下面这一套 schema。旧字段 `adjudicationResult`、`narrationText`、`triggeredEndingKey` 已废弃，不再作为 v1 实现目标。
 
 ```json
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "LLMAdjudicationResponse",
-  "type": "object",
-  "properties": {
-    "actionCategory": {
-      "type": "string",
-      "enum": ["deceive", "protect", "sacrifice", "bribe", "confess", "peace", "commandVictor", "absurd", "generic"]
+  "schemaVersion": "what-if-llm-adjudication/v1",
+  "actionCategory": "deceive",
+  "secondaryCategory": null,
+  "adjudication": "costly_success",
+  "confidence": 0.82,
+  "narration": "你把阵灵认主解释成古魔法诱导术，但伊薇特仍记下了阵灵跪拜的细节。",
+  "stateDelta": {
+    "exposureRisk": -3,
+    "heroTrust": 6,
+    "mageEvidence": 4,
+    "priestRedemption": 0,
+    "thiefLeverage": 0,
+    "castleIntegrity": 0,
+    "victorMisread": 5,
+    "partyProgress": 20,
+    "butterflyDeviation": 0
+  },
+  "flagUpdates": {
+    "set": {
+      "commandVictorSuccess": false
     },
-    "adjudicationResult": {
-      "type": "string",
-      "enum": ["success", "costly_success", "disaster_failure"]
-    },
-    "narrationText": {
-      "type": "string",
-      "description": "GM 旁白裁决描述，解释行动结果与环境变化"
-    },
-    "stateDelta": {
-      "type": "object",
-      "properties": {
-        "exposureRisk": { "type": "number" },
-        "heroTrust": { "type": "number" },
-        "castleIntegrity": { "type": "number" },
-        "thiefLeverage": { "type": "number" },
-        "mageEvidence": { "type": "number" }
-      }
-    },
-    "characterResponses": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "characterId": { "type": "string" },
-          "emotion": { "type": "string" },
-          "content": { "type": "string" }
-        },
-        "required": ["characterId", "emotion", "content"]
-      }
-    },
-    "triggeredEndingKey": {
-      "type": ["string", "null"],
-      "description": "若行动引发直接当场死局/当场曝光，返回结局 Key"
+    "increment": {
+      "majorLieCount": 1
     }
   },
-  "required": ["actionCategory", "adjudicationResult", "narrationText", "stateDelta", "characterResponses"]
+  "triggeredRules": ["gate.deceive.allowed", "ivette.light_suspicion"],
+  "focusedCharacters": ["ivette", "leon"],
+  "characterResponses": [
+    {
+      "characterId": "ivette",
+      "emotion": "推了推眼镜",
+      "stance": "suspicious",
+      "content": "这个解释能暂时成立，但我会记下阵灵的原话。"
+    },
+    {
+      "characterId": "leon",
+      "emotion": "松了一口气",
+      "stance": "supportive",
+      "content": "原来如此，幸好你懂这些古怪阵法。"
+    }
+  ],
+  "evidenceLog": [
+    {
+      "evidenceId": "gate-spirit-recognition",
+      "ownerCharacterId": "ivette",
+      "severity": 4,
+      "content": "阵灵曾对阿斯兰使用魔王称谓。"
+    }
+  ],
+  "suggestedNextSceneId": "act2_dungeon",
+  "suggestedEndingKey": null,
+  "safetyNotes": []
 }
 ```
 
----
+字段规则：
 
-## 3. 数值防爆与确定性 Guardrails (防爆裁剪与安全兜底)
+- `schemaVersion` 固定为 `what-if-llm-adjudication/v1`。
+- `actionCategory` 必须是：`deceive`、`protect`、`sacrifice`、`bribe`、`confess`、`peace`、`commandVictor`、`absurd`、`generic`。
+- `secondaryCategory` 可以为空；若存在，只用于解释，不自动叠加全部数值。
+- Runtime v1 adapter 只接受 `success`、`costly_success`、`disaster_failure`。`failure` 是 v1.1 目标，必须等 UI 和转场语义实现后再开放给 LLM。
+- `stateDelta` 只能包含 Runtime v1 的 9 个状态字段。
+- `flagUpdates.set` 和 `flagUpdates.increment` 只能包含 Runtime v1 已初始化旗标。
+- `characterId` 只能是 `narrator`、`aslan`、`leon`、`ivette`、`mira`、`locke`、`victor`。
+- `suggestedNextSceneId` 只能来自 Runtime v1 场景 key，且运行时可以忽略。
+- `suggestedEndingKey` 只能来自 Runtime v1 结局 key，且运行时拥有最终裁决权。
+- `confidence` 低于实现阈值时，应使用本地 fallback 或要求更保守的 `generic` 裁决。
 
-1. **数值裁剪硬约束**：
-   - 运行时拿到 LLM 提供的 `stateDelta` 后，必须强行应用 `Math.min(100, Math.max(0, current + delta))` 裁剪至 `[0, 100]`。
-2. **结局优先级校验**：
-   - 当 `exposureRisk >= 100` 或触发硬死亡标志时，运行时直接拦截并跳转至对应即时大结局（如 `gate_exposure_ending`）。
-   - 防止 LLM 幻觉生成“直接通关”或绕过幕数的逻辑漏洞。
-3. **降级兜底机制 (Fallback System)**：
-   - 当网络超时或 LLM API 故障时，自动降级为本地预制 `SCENE_TREE` 的规则评估器 (`adjudicateFreeAction`)，保证离线与高并发下 100% 可玩。
+字段映射：
 
----
+- LLM 原始输出：`suggestedNextSceneId`、`suggestedEndingKey`。
+- Validator 通过后写入本地回合数据：`nextSceneId`、`endingKey`。
+- 未通过 validator 时，不写入本地跳转或结局字段，改用本地 fallback。
 
-## 4. 上游 Silicon Factory (人格包) 适配
+## 6. LLM Prompt 输入 v1
 
-将 Silicon Factory 的 **12 维度人格模型**注入 LLM System Prompt 中：
-- `identity` & `socialRoles`: 确定角色的基本立场（如阿斯兰是假圣骑士/真魔王，莱昂是热血勇者，伊薇特是冷酷理性法师）。
-- `valuesAndBeliefs`: 决定 Agent 对玩家自由发言的敏感点（如对伊薇特伪造档案的逻辑漏洞极度敏感，对莱昂的骑士精神极度崇尚）。
-- `emotionalProfile` & `stressTriggers`: 决定 Agent 触发慌张/汗流浃背/拔剑对峙的阈值。
+每次调用 LLM 时，只给本回合必要上下文：
 
----
+```json
+{
+  "scenarioId": "undercover-demon-king",
+  "runtimeVersion": "v1",
+  "scene": {
+    "id": "gate",
+    "act": 1,
+    "title": "第一幕：城门大门与阵灵认主破绽",
+    "mishap": "阵灵当众高喊魔王陛下。",
+    "allowedCategories": ["deceive", "sacrifice", "commandVictor", "absurd", "generic"],
+    "forbiddenCategories": ["confess"]
+  },
+  "playerAction": {
+    "type": "free_text",
+    "text": "我解释这是古代因果诱导阵。"
+  },
+  "stats": {
+    "exposureRisk": 25,
+    "heroTrust": 72,
+    "mageEvidence": 34,
+    "priestRedemption": 58,
+    "thiefLeverage": 10,
+    "castleIntegrity": 85,
+    "victorMisread": 32,
+    "partyProgress": 10,
+    "butterflyDeviation": 0
+  },
+  "flags": {},
+  "focusedCharacters": ["ivette", "leon"],
+  "redLineSummary": {},
+  "endingPolicy": "runtime_decides"
+}
+```
 
-## 5. 剧情推进与结局导出收敛
+System prompt 必须明确：
 
-- **五幕流转**：
-  `第一幕：魔王城大门` $\rightarrow$ `第二幕：前庭废墟/暗黑地牢` $\rightarrow$ `第三幕：禁忌图书馆/偏殿宝库` $\rightarrow$ `第四幕：近卫军决死长廊` $\rightarrow$ `第五幕：空王座大殿`
-- **因果归因生成器 (`generateFateCauses`)**：
-  结算页根据玩家整个剧本累计的 `exposureRisk`、`heroTrust`、`contradictionCount`、`protectedInnocentsCount` 等隐性指标，自动生成带有强因果关系的终局解说词。
+- 你是 GM 助手，不是最终运行时。
+- 你可以建议裁决，但不能保证结局。
+- 不要添加新场景、新角色、新状态字段。
+- 不要让玩家绕过当前破绽。
+- 不要让任何角色违背其红线。
+- 每个输出都必须能被玩家理解为“这一步为什么造成这个后果”。
+
+## 7. Validator 必做规则
+
+实现 `validateAdjudication(candidate, runtimeContext)` 时至少检查：
+
+- schemaVersion 是否正确。
+- 枚举字段是否合法。
+- `stateDelta` 是否只包含 9 个状态字段。
+- 单项 delta 是否在本场景允许范围内；超出则裁剪或降级。
+- `flagUpdates` 是否只写已初始化旗标。
+- `suggestedNextSceneId` 是否存在，并且符合当前场景转场矩阵。
+- `suggestedEndingKey` 是否存在，并且未被角色红线阻断。
+- `adjudication` 为 `disaster_failure` 时必须有结局候选或硬失败原因。
+- `adjudication` 为 `failure` 时 Runtime v1 必须降级为 `costly_success` 或本地 fallback，直到 UI 支持普通失败。
+
+## 8. 红线与结局拦截
+
+结局判定顺序应收敛为：
+
+1. 应用候选状态变化并裁剪到 `0-100`。
+2. 检查场景专属即时结局。
+3. 检查 Runtime v1 硬失败阈值：`exposureRisk >= 75` 或 `mageEvidence >= 65`。
+4. 在最终幕进入 `verifyCharacterRedLines(stats, flags)`。
+5. 红线阻断 `dualRuler`、`redeemed`、`perfectSpy` 等好结局。
+6. 执行 Runtime v1 结局优先级。
+7. 未命中时进入 `stalemate`。
+
+注意：当前 `src/app.js` 还没有完整 `verifyCharacterRedLines`。在实现前，相关文档规则属于 v1.1 设计目标，不应假装已经由 Runtime v1 执行。
+
+## 9. MVP 接入顺序
+
+建议分四步实现：
+
+1. **统一本地 adapter**：让当前 `adjudicateFreeAction` 返回 LLM v1 同构数据，但仍完全本地运行。
+2. **Validator + fallback**：非法字段丢弃，非法枚举降级，本地裁决兜底。
+3. **Validator 测试基线**：覆盖非法 key 降级、delta 裁剪、`failure` 拒收、`suggestedEndingKey` 合法性。
+4. **红线/结局 validator**：先只处理最终幕好结局拦截，不重写全局玩法。
+5. **真实 LLM 调用**：只替换自由行动，不替换预设选项、结局优先级或场景图。
+
+每一步都必须通过：
+
+```bash
+pnpm check
+pnpm test:runtime
+```
