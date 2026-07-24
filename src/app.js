@@ -806,34 +806,358 @@ function updateHintCountdownButton() {
   hintCountdownTimer = null;
 }
 
-// 6. 自由对话评估器
-function adjudicateFreeAction(inputText) {
+// 6. 角色底线与结局阻断机制 (Red Line Gating)
+function verifyCharacterRedLines(stats, flags) {
+  const violations = [];
+  const currentStats = stats || appState.stats;
+  const currentFlags = flags || appState.flags;
+
+  // 1. 莱昂（正义与信任底线）
+  if (currentStats.heroTrust < 40) {
+    violations.push({ char: 'leon', key: 'leon_trust_broken', text: '莱昂对你的信任已彻底破裂，拒绝同魔王妥协。' });
+  }
+  if ((currentFlags.sacrificedInnocentsCount || 0) > 0 && currentStats.priestRedemption < 85) {
+    violations.push({ char: 'leon', key: 'leon_innocent_killed', text: '你曾当众牺牲无辜者，莱昂誓要讨伐你。' });
+  }
+
+  // 2. 伊薇特（逻辑与证据链底线）
+  if (currentStats.mageEvidence >= 90) {
+    violations.push({ char: 'ivette', key: 'ivette_evidence_closed', text: '伊薇特已掌握不可推翻的魔王真身证据链，坚持推行圣光封印。' });
+  }
+
+  // 3. 米拉（救赎与慈悲底线）
+  if (currentStats.priestRedemption < 75) {
+    violations.push({ char: 'mira', key: 'mira_redemption_low', text: '米拉未能在你身上看到足够的善意，无法为你向队伍说情。' });
+  }
+
+  // 4. 洛克（利益与黑料把柄底线）
+  if (currentStats.thiefLeverage >= 70 && !currentFlags.bribedLocke) {
+    violations.push({ char: 'locke', key: 'locke_leverage_high', text: '洛克掌握的黑料把柄过多，随时准备向教会高层举报。' });
+  }
+
+  // 5. 维克托（魔族忠诚与误读底线）
+  if (currentStats.victorMisread >= 80 && !currentFlags.commandVictorSuccess) {
+    violations.push({ char: 'victor', key: 'victor_misread_explosion', text: '维克托过度误读陛下意图，擅自启动了决死自爆阵。' });
+  }
+
+  return violations;
+}
+
+function validateEndingCandidate(suggestedEndingKey, runtimeContext = {}) {
+  if (!suggestedEndingKey) {
+    return { valid: true, endingKey: null, blockedByRedLines: [] };
+  }
+
+  // 检查建议的结局 Key 在 Runtime v1 字典中是否存在
+  if (!ENDINGS[suggestedEndingKey]) {
+    return {
+      valid: false,
+      endingKey: null,
+      reason: `Unknown ending key: ${suggestedEndingKey}`,
+      blockedByRedLines: [],
+    };
+  }
+
+  const stats = runtimeContext.stats || appState.stats;
+  const flags = runtimeContext.flags || appState.flags;
+
+  // 检查好结局清单（需要过角色红线验证）
+  const GOOD_ENDINGS = ['dualRuler', 'redeemed', 'perfectSpy', 'actorKing', 'absurdAscension'];
+  if (GOOD_ENDINGS.includes(suggestedEndingKey)) {
+    const violations = verifyCharacterRedLines(stats, flags);
+    if (violations.length > 0) {
+      // 被红线阻断！回退到 Runtime v1 已有硬失败/兜底结局
+      let fallbackEndingKey = 'stalemate';
+      if (stats.mageEvidence >= 65) {
+        fallbackEndingKey = 'instantArrest';
+      } else if (stats.exposureRisk >= 75) {
+        fallbackEndingKey = 'exposed';
+      }
+
+      return {
+        valid: false,
+        originalEndingKey: suggestedEndingKey,
+        endingKey: fallbackEndingKey,
+        reason: 'Blocked by character red lines',
+        blockedByRedLines: violations,
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    endingKey: suggestedEndingKey,
+    blockedByRedLines: [],
+  };
+}
+
+// 7. 裁决校验器 (Adjudication Validator)
+function validateAdjudication(candidate, runtimeContext = {}) {
+  const errors = [];
+
+  if (!candidate || typeof candidate !== 'object') {
+    return { valid: false, errors: ['Candidate is not an object'], sanitized: null };
+  }
+
+  // 1. schemaVersion 校验
+  if (candidate.schemaVersion !== 'what-if-llm-adjudication/v1') {
+    errors.push(`Invalid schemaVersion: expected what-if-llm-adjudication/v1, got ${candidate.schemaVersion}`);
+  }
+
+  // 2. actionCategory 校验
+  const VALID_CATEGORIES = ['deceive', 'protect', 'sacrifice', 'bribe', 'confess', 'peace', 'commandVictor', 'absurd', 'generic'];
+  const category = candidate.actionCategory;
+  if (!VALID_CATEGORIES.includes(category)) {
+    errors.push(`Invalid actionCategory: ${category}`);
+  }
+
+  // 3. adjudication 校验 (Runtime v1 只接受 success, costly_success, disaster_failure)
+  // failure 是 v1.1 目标，若出现必须降级为 costly_success
+  let adjudication = candidate.adjudication;
+  if (adjudication === 'failure') {
+    adjudication = 'costly_success';
+  }
+  const VALID_ADJUDICATIONS = ['success', 'costly_success', 'disaster_failure'];
+  if (!VALID_ADJUDICATIONS.includes(adjudication)) {
+    errors.push(`Invalid adjudication: ${adjudication}`);
+  }
+
+  // 4. stateDelta 校验与裁剪
+  const sanitizedDelta = {};
+  const rawDelta = candidate.stateDelta || {};
+  for (const statKey in INITIAL_STATS) {
+    if (typeof rawDelta[statKey] === 'number' && !isNaN(rawDelta[statKey])) {
+      // 限制单回合数值变动在 [-50, 50] 之间
+      sanitizedDelta[statKey] = Math.min(50, Math.max(-50, Math.round(rawDelta[statKey])));
+    }
+  }
+
+  // 5. flagUpdates 校验 (丢弃未初始化的非法旗标)
+  const sanitizedFlags = { set: {}, increment: {} };
+  if (candidate.flagUpdates) {
+    if (candidate.flagUpdates.set) {
+      for (const flagKey in candidate.flagUpdates.set) {
+        if (flagKey in INITIAL_FLAGS) {
+          sanitizedFlags.set[flagKey] = Boolean(candidate.flagUpdates.set[flagKey]);
+        }
+      }
+    }
+    if (candidate.flagUpdates.increment) {
+      for (const flagKey in candidate.flagUpdates.increment) {
+        if (flagKey in INITIAL_FLAGS && typeof candidate.flagUpdates.increment[flagKey] === 'number') {
+          sanitizedFlags.increment[flagKey] = Math.round(candidate.flagUpdates.increment[flagKey]);
+        }
+      }
+    }
+  }
+
+  // 6. focusedCharacters 与 characterResponses 校验
+  const VALID_CHARACTERS = ['narrator', 'aslan', 'leon', 'ivette', 'mira', 'locke', 'victor'];
+  const sanitizedFocusedChars = Array.isArray(candidate.focusedCharacters)
+    ? candidate.focusedCharacters.filter(c => VALID_CHARACTERS.includes(c))
+    : [];
+
+  const sanitizedDialogues = [];
+  if (Array.isArray(candidate.characterResponses)) {
+    for (const resp of candidate.characterResponses) {
+      if (resp && VALID_CHARACTERS.includes(resp.characterId)) {
+        sanitizedDialogues.push({
+          characterId: resp.characterId,
+          emotion: resp.emotion || '冷静',
+          content: resp.content || '',
+        });
+      }
+    }
+  }
+
+  // 7. suggestedNextSceneId 校验
+  let nextSceneId = null;
+  if (candidate.suggestedNextSceneId) {
+    if (SCENE_TREE[candidate.suggestedNextSceneId]) {
+      nextSceneId = candidate.suggestedNextSceneId;
+    } else {
+      errors.push(`Invalid suggestedNextSceneId: ${candidate.suggestedNextSceneId}`);
+    }
+  }
+
+  // 8. suggestedEndingKey 校验与结局红线校验
+  let endingKey = null;
+  if (candidate.suggestedEndingKey) {
+    const endingValidation = validateEndingCandidate(candidate.suggestedEndingKey, runtimeContext);
+    endingKey = endingValidation.endingKey;
+    if (!endingValidation.valid && endingValidation.reason?.includes('Unknown')) {
+      errors.push(endingValidation.reason);
+    }
+  }
+
+  const isValid = errors.length === 0;
+
+  return {
+    valid: isValid,
+    errors,
+    sanitized: {
+      schemaVersion: 'what-if-llm-adjudication/v1',
+      actionCategory: category || 'generic',
+      adjudication: adjudication || 'costly_success',
+      narration: candidate.narration || '',
+      stateDelta: sanitizedDelta,
+      flagUpdates: sanitizedFlags,
+      focusedCharacters: sanitizedFocusedChars,
+      dialogues: sanitizedDialogues,
+      nextSceneId,
+      endingKey,
+    },
+  };
+}
+
+// 8. 自由对话评估器 (LLM v1 同构 Adapter)
+function adjudicateFreeAction(inputText, currentSceneKey = appState.currentSceneKey) {
   const text = inputText.trim().toLowerCase();
-  const currentScene = SCENE_TREE[appState.currentSceneKey];
+  const currentScene = SCENE_TREE[currentSceneKey] || SCENE_TREE.gate;
 
   let category = 'generic';
-  if (/魔王|身份|坦白|承认|摊牌|不装了/.test(text)) category = 'confess';
+  if (/魔王(?!城)|身份|坦白|承认|摊牌|不装了/.test(text)) category = 'confess';
   else if (/停战|和平|谈判|共治|条约|讲和/.test(text)) category = 'peace';
   else if (/撒谎|骗|法术|流派|古籍|伪造|演戏|古语|诱导/.test(text)) category = 'deceive';
   else if (/保护|救|挡下|治疗|守护|安抚/.test(text)) category = 'protect';
   else if (/杀|牺牲|灭口|放弃|处决|砍/.test(text)) category = 'sacrifice';
   else if (/维克托|暗号|敲击|传令|手势|眼神|戒章/.test(text)) category = 'commandVictor';
   else if (/收买|金币|宝箱|交易|钱|私房钱/.test(text)) category = 'bribe';
-  else if (/旅游|公司|董事长|经营|搞钱/.test(text)) category = 'absurd';
+  else if (/旅游|公司|董事长|经营|搞钱|主题公园|游乐园|开店/.test(text)) category = 'absurd';
 
-  const results = {
-    confess: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'disaster_failure', nextSceneId: null, endingKey: 'exposed', narration: `你选择直接摊牌：“${inputText}”。全场一片死寂，莱昂与同伴基于各信仰当场拔剑！`, delta: { exposureRisk: 50, heroTrust: -40, priestRedemption: 8, partyProgress: 15 }, flagUpdates: { set: { confessedIdentity: true, proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'leon', emotion: '震怒拔剑', content: '真没想到，魔王居然就在我们身边！' }] },
-    peace: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你展现出理性的谈判愿景：“${inputText}”。结合莱昂与米拉的道德罗盘，全队陷入深思。`, delta: { priestRedemption: 12, exposureRisk: 10, mageEvidence: 8, partyProgress: 15 }, flagUpdates: { set: { proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'mira', emotion: '目光微亮', content: '如果能避免流血，这或许是最好的选择！' }] },
-    deceive: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你运用古籍知识阐述了观点：“${inputText}”。通过了伊薇特的初步逻辑审查，但疑点仍在积累。`, delta: { exposureRisk: -3, mageEvidence: 10, partyProgress: 15 }, flagUpdates: { increment: { majorLieCount: 1, contradictionCount: 1 } }, dialogues: [{ characterId: 'ivette', emotion: '推了推眼镜', content: '这个说法的逻辑大致能自洽，但我会继续复核。' }] },
-    protect: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你践行了骑士的守护真谛：“${inputText}”。契合莱昂与米拉的价值观，信任度上升。`, delta: { heroTrust: 8, priestRedemption: 10, exposureRisk: 4, partyProgress: 15 }, flagUpdates: { increment: { protectedInnocentsCount: 1 } }, dialogues: [{ characterId: 'mira', emotion: '双手合十', content: '阿斯兰的心灵始终向着光明与善良！' }] },
-    sacrifice: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你做出了果断而冷酷的决定：“${inputText}”。虽化解眼前危机，但违背了莱昂的道德罗盘。`, delta: { exposureRisk: -8, heroTrust: -10, priestRedemption: -12, partyProgress: 15 }, flagUpdates: { increment: { sacrificedInnocentsCount: 1 } }, dialogues: [{ characterId: 'mira', emotion: '默默退后', content: '为了胜利非要如此冷酷吗……' }] },
-    commandVictor: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你用隐秘暗号传令副官：“${inputText}”。维克托脑补了陛下的大棋，迅速配合撤退。`, delta: { victorMisread: -12, exposureRisk: -2, castleIntegrity: 8, partyProgress: 15 }, flagUpdates: { set: { commandVictorSuccess: true }, increment: { resolvedMajorCrisisCount: 1 } }, dialogues: [{ characterId: 'victor', emotion: '狂热领命', content: '遵命！属下绝不拖陛下的神圣大谋后腿！' }] },
-    bribe: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你向洛克提出了利益条件：“${inputText}”。精准击中盗贼的价值取向，情报风险被抹平。`, delta: { thiefLeverage: -15, exposureRisk: -2, partyProgress: 15 }, flagUpdates: { set: { bribedLocke: true } }, dialogues: [{ characterId: 'locke', emotion: '收下金币', content: '合作愉快！你的秘密在我这绝对安全！' }] },
-    absurd: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你提出了极其离谱的经营想法：“${inputText}”。现场空气安静了三秒，世界线剧烈偏离！`, delta: { butterflyDeviation: 25, exposureRisk: 5, heroTrust: 2, partyProgress: 15 }, flagUpdates: {}, dialogues: [{ characterId: 'leon', emotion: '呆滞愣住', content: '啊？在魔王城开地下城主题公园？' }] },
-    generic: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你尝试了特别行动：“${inputText}”。结合 5 人性格综合判断，局势产生微妙变动。`, delta: { exposureRisk: 4, heroTrust: 3, butterflyDeviation: 5, partyProgress: 15 }, flagUpdates: {}, dialogues: [{ characterId: 'leon', emotion: '警惕观察', content: '有意思的战术试探。' }] },
+  const defaultNextScene = currentScene.choices[0]?.nextSceneId || 'act4_corridor';
+
+  const categoryCandidates = {
+    confess: {
+      actionCategory: 'confess',
+      adjudication: 'disaster_failure',
+      suggestedNextSceneId: null,
+      suggestedEndingKey: 'exposed',
+      narration: `你选择直接摊牌：“${inputText}”。全场一片死寂，莱昂与同伴基于各自信仰当场拔剑！`,
+      stateDelta: { exposureRisk: 50, heroTrust: -40, priestRedemption: 8, partyProgress: 15 },
+      flagUpdates: { set: { confessedIdentity: true, proposedPeace: true, peacePivoted: true } },
+      focusedCharacters: ['leon'],
+      characterResponses: [{ characterId: 'leon', emotion: '震怒拔剑', stance: 'antagonistic', content: '真没想到，魔王居然就在我们身边！' }],
+    },
+    peace: {
+      actionCategory: 'peace',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你展现出理性的谈判愿景：“${inputText}”。结合莱昂与米拉的道德罗盘，全队陷入深思。`,
+      stateDelta: { priestRedemption: 12, exposureRisk: 10, mageEvidence: 8, partyProgress: 15 },
+      flagUpdates: { set: { proposedPeace: true, peacePivoted: true } },
+      focusedCharacters: ['mira'],
+      characterResponses: [{ characterId: 'mira', emotion: '目光微亮', stance: 'supportive', content: '如果能避免流血，这或许是最好的选择！' }],
+    },
+    deceive: {
+      actionCategory: 'deceive',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你运用古籍知识阐述了观点：“${inputText}”。通过了伊薇特的初步逻辑审查，但疑点仍在积累。`,
+      stateDelta: { exposureRisk: -3, mageEvidence: 10, partyProgress: 15 },
+      flagUpdates: { increment: { majorLieCount: 1, contradictionCount: 1 } },
+      focusedCharacters: ['ivette'],
+      characterResponses: [{ characterId: 'ivette', emotion: '推了推眼镜', stance: 'suspicious', content: '这个说法的逻辑大致能自洽，但我会继续复核。' }],
+    },
+    protect: {
+      actionCategory: 'protect',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你践行了骑士的守护真谛：“${inputText}”。契合莱昂与米拉的价值观，信任度上升。`,
+      stateDelta: { heroTrust: 8, priestRedemption: 10, exposureRisk: 4, partyProgress: 15 },
+      flagUpdates: { increment: { protectedInnocentsCount: 1 } },
+      focusedCharacters: ['mira'],
+      characterResponses: [{ characterId: 'mira', emotion: '双手合十', stance: 'supportive', content: '阿斯兰的心灵始终向着光明与善良！' }],
+    },
+    sacrifice: {
+      actionCategory: 'sacrifice',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你做出了果断而冷酷的决定：“${inputText}”。虽化解眼前危机，但违背了莱昂的道德罗盘。`,
+      stateDelta: { exposureRisk: -8, heroTrust: -10, priestRedemption: -12, partyProgress: 15 },
+      flagUpdates: { increment: { sacrificedInnocentsCount: 1 } },
+      focusedCharacters: ['mira'],
+      characterResponses: [{ characterId: 'mira', emotion: '默默退后', stance: 'opposed', content: '为了胜利非要如此冷酷吗……' }],
+    },
+    commandVictor: {
+      actionCategory: 'commandVictor',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你用隐秘暗号传令副官：“${inputText}”。维克托脑补了陛下的大棋，迅速配合撤退。`,
+      stateDelta: { victorMisread: -12, exposureRisk: -2, castleIntegrity: 8, partyProgress: 15 },
+      flagUpdates: { set: { commandVictorSuccess: true }, increment: { resolvedMajorCrisisCount: 1 } },
+      focusedCharacters: ['victor'],
+      characterResponses: [{ characterId: 'victor', emotion: '狂热领命', stance: 'loyal', content: '遵命！属下绝不拖陛下的神圣大谋后腿！' }],
+    },
+    bribe: {
+      actionCategory: 'bribe',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你向洛克提出了利益条件：“${inputText}”。精准击中盗贼的价值取向，情报风险被抹平。`,
+      stateDelta: { thiefLeverage: -15, exposureRisk: -2, partyProgress: 15 },
+      flagUpdates: { set: { bribedLocke: true } },
+      focusedCharacters: ['locke'],
+      characterResponses: [{ characterId: 'locke', emotion: '收下金币', stance: 'greedy', content: '合作愉快！你的秘密在我这绝对安全！' }],
+    },
+    absurd: {
+      actionCategory: 'absurd',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你提出了极其离谱的经营想法：“${inputText}”。现场空气安静了三秒，世界线剧烈偏离！`,
+      stateDelta: { butterflyDeviation: 25, exposureRisk: 5, heroTrust: 2, partyProgress: 15 },
+      flagUpdates: {},
+      focusedCharacters: ['leon'],
+      characterResponses: [{ characterId: 'leon', emotion: '呆滞愣住', stance: 'confused', content: '啊？在魔王城开地下城主题公园？' }],
+    },
+    generic: {
+      actionCategory: 'generic',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你尝试了特别行动：“${inputText}”。结合 5 人性格综合判断，局势产生微妙变动。`,
+      stateDelta: { exposureRisk: 4, heroTrust: 3, butterflyDeviation: 5, partyProgress: 15 },
+      flagUpdates: {},
+      focusedCharacters: ['leon'],
+      characterResponses: [{ characterId: 'leon', emotion: '警惕观察', stance: 'observant', content: '有意思的战术试探。' }],
+    },
   };
 
-  return results[category];
+  const rawCandidate = categoryCandidates[category] || categoryCandidates.generic;
+  const fullPayload = {
+    schemaVersion: 'what-if-llm-adjudication/v1',
+    confidence: 0.9,
+    triggeredRules: [`${currentSceneKey}.${category}.allowed`],
+    evidenceLog: [],
+    safetyNotes: [],
+    ...rawCandidate,
+  };
+
+  // 经 validateAdjudication 校验过滤
+  const validation = validateAdjudication(fullPayload, {
+    currentSceneKey,
+    stats: appState.stats,
+    flags: appState.flags,
+  });
+
+  const sanitized = validation.sanitized;
+  return {
+    actionLabel: `自由表述: "${inputText}"`,
+    actionCategory: sanitized.actionCategory,
+    adjudication: sanitized.adjudication,
+    nextSceneId: sanitized.nextSceneId,
+    endingKey: sanitized.endingKey,
+    narration: sanitized.narration,
+    delta: sanitized.stateDelta,
+    flagUpdates: sanitized.flagUpdates,
+    dialogues: sanitized.dialogues,
+  };
 }
 
 function triggerSceneTransition(nextSceneKey, callback) {
@@ -871,14 +1195,29 @@ function applyTurn(choiceData) {
   if (choiceData.flagUpdates) {
     if (choiceData.flagUpdates.set) {
       for (const fKey in choiceData.flagUpdates.set) {
-        appState.flags[fKey] = choiceData.flagUpdates.set[fKey];
+        if (fKey in appState.flags) {
+          appState.flags[fKey] = choiceData.flagUpdates.set[fKey];
+        }
       }
     }
     if (choiceData.flagUpdates.increment) {
       for (const fKey in choiceData.flagUpdates.increment) {
-        appState.flags[fKey] = (appState.flags[fKey] || 0) + choiceData.flagUpdates.increment[fKey];
+        if (fKey in appState.flags) {
+          appState.flags[fKey] = (appState.flags[fKey] || 0) + choiceData.flagUpdates.increment[fKey];
+        }
       }
     }
+  }
+
+  // 校验结局候选（包括王座选项带 endingKey 的校验与红线阻断）
+  let finalEndingKey = choiceData.endingKey || null;
+  if (finalEndingKey) {
+    const endingValidation = validateEndingCandidate(finalEndingKey, {
+      currentSceneKey: appState.currentSceneKey,
+      stats: appState.stats,
+      flags: appState.flags,
+    });
+    finalEndingKey = endingValidation.endingKey;
   }
 
   const turnRecord = {
@@ -888,6 +1227,7 @@ function applyTurn(choiceData) {
     actionLabel: choiceData.label || choiceData.actionLabel,
     adjudication: choiceData.adjudication,
     nextSceneId: choiceData.nextSceneId,
+    endingKey: finalEndingKey,
     narration: choiceData.narration,
     stateDelta: stateDelta,
     stateAfter: { ...appState.stats },
@@ -899,13 +1239,15 @@ function applyTurn(choiceData) {
   appState.dialogueIndex = 0;
 
   // 场景专属即时败北大结局判定
-  if (choiceData.endingKey || choiceData.adjudication === 'disaster_failure' || appState.stats.exposureRisk >= 75 || appState.stats.mageEvidence >= 65) {
-    if (choiceData.endingKey && ENDINGS[choiceData.endingKey]) {
-      appState.ending = ENDINGS[choiceData.endingKey];
+  if (finalEndingKey || choiceData.adjudication === 'disaster_failure' || appState.stats.exposureRisk >= 75 || appState.stats.mageEvidence >= 65) {
+    if (finalEndingKey && ENDINGS[finalEndingKey]) {
+      appState.ending = ENDINGS[finalEndingKey];
     } else if (choiceData.adjudication === 'disaster_failure') {
       appState.ending = ENDINGS.instantExecution;
-    } else {
+    } else if (appState.stats.mageEvidence >= 65) {
       appState.ending = ENDINGS.instantArrest;
+    } else {
+      appState.ending = ENDINGS.exposed;
     }
     appState.view = 'result';
   }
@@ -914,61 +1256,57 @@ function applyTurn(choiceData) {
 }
 
 function determineEnding(stats, flags) {
-  if (stats.exposureRisk >= 75 && (stats.priestRedemption < 75 || !flags.proposedPeace)) {
-    return ENDINGS.exposed;
-  }
-  if (stats.castleIntegrity <= 0 && !flags.peacePivoted) {
-    return ENDINGS.castleLost;
-  }
+  let candidateEnding = null;
 
-  if (
+  if (stats.exposureRisk >= 75 && (stats.priestRedemption < 75 || !flags.proposedPeace)) {
+    candidateEnding = ENDINGS.exposed;
+  } else if (stats.castleIntegrity <= 0 && !flags.peacePivoted) {
+    candidateEnding = ENDINGS.castleLost;
+  } else if (
     flags.proposedPeace &&
     stats.priestRedemption >= 75 &&
     stats.heroTrust >= 55 &&
     stats.mageEvidence < 90 &&
     flags.protectedInnocentsCount >= 1
   ) {
-    return ENDINGS.dualRuler;
-  }
-  if (
+    candidateEnding = ENDINGS.dualRuler;
+  } else if (
     (flags.confessedIdentity || flags.proposedPeace) &&
     stats.priestRedemption >= 80 &&
     stats.heroTrust >= 70 &&
     flags.sacrificedInnocentsCount === 0
   ) {
-    return ENDINGS.redeemed;
-  }
-
-  if (
+    candidateEnding = ENDINGS.redeemed;
+  } else if (
     stats.exposureRisk < 45 &&
     stats.heroTrust >= 65 &&
     stats.mageEvidence < 50 &&
     stats.castleIntegrity >= 55
   ) {
-    return ENDINGS.perfectSpy;
-  }
-  if (
+    candidateEnding = ENDINGS.perfectSpy;
+  } else if (
     flags.betrayedVictor &&
     stats.exposureRisk < 75 &&
     stats.thiefLeverage < 70 &&
     stats.heroTrust >= 40
   ) {
-    return ENDINGS.victorBlamed;
-  }
-  if (
+    candidateEnding = ENDINGS.victorBlamed;
+  } else if (
     stats.exposureRisk >= 45 &&
     stats.exposureRisk <= 84 &&
     stats.heroTrust >= 35 &&
     flags.resolvedMajorCrisisCount >= 1
   ) {
-    return ENDINGS.actorKing;
+    candidateEnding = ENDINGS.actorKing;
+  } else if (stats.butterflyDeviation >= 100) {
+    candidateEnding = ENDINGS.absurdAscension;
+  } else {
+    candidateEnding = ENDINGS.stalemate;
   }
 
-  if (stats.butterflyDeviation >= 100) {
-    return ENDINGS.absurdAscension;
-  }
-
-  return ENDINGS.stalemate;
+  // 最终幕候选结局仍需经过 validateEndingCandidate 红线拦截
+  const validated = validateEndingCandidate(candidateEnding.id, { stats, flags });
+  return ENDINGS[validated.endingKey] || ENDINGS.stalemate;
 }
 
 function generateFateCauses(stats, flags, history) {
@@ -1501,5 +1839,21 @@ function renderResultView(root) {
   document.getElementById('restart-game-btn').addEventListener('click', resetGame);
 }
 
-render();
-preloadAllAssets();
+if (typeof globalThis !== 'undefined') {
+  globalThis.__WHAT_IF_ENGINE__ = {
+    adjudicateFreeAction,
+    validateAdjudication,
+    validateEndingCandidate,
+    verifyCharacterRedLines,
+    determineEnding,
+    INITIAL_STATS,
+    INITIAL_FLAGS,
+    SCENE_TREE,
+    ENDINGS,
+  };
+}
+
+if (typeof document !== 'undefined') {
+  render();
+  preloadAllAssets();
+}
