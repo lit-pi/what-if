@@ -36,7 +36,7 @@ const CHARACTERS = {
     role: '卧底魔王',
     avatar: '魔',
     image: './assets/char_aslan.png',
-    panickedImage: './assets/char_aslan_faceoff.png',
+    panickedImage: './assets/char_aslan_knight.png',
     knightImage: './assets/char_aslan_knight.png',
     color: '#c77dff',
     tagIcon: '👑',
@@ -1070,35 +1070,21 @@ function renderPlayView(root) {
                 </button>
               `
                   : `
-                <!-- 折叠提示 Drawer 按钮 -->
-                <div class="hints-drawer-toggle-row">
-                  <button id="toggle-hints-btn" class="hints-toggle-btn">
-                    <span>💡 表达灵感 / 提示建议 (${(scene.hintSuggestions || scene.choices || []).length}) ${appState.showHintsDrawer ? '▲ 收起' : '▼ 展开'}</span>
-                  </button>
+                <div class="choices-stack">
+                  ${scene.choices
+                    .map(
+                      (ch, idx) => `
+                    <button class="vn-choice-btn ${ch.riskTag === '支线' ? 'side-quest-btn' : ''}" data-hint-index="${idx}">
+                      <span class="tag tag-${ch.riskTag || '稳妥'}">${ch.riskTag || '建议'}</span>
+                      <div class="choice-text-col">
+                        <strong class="choice-title-text">${ch.label}</strong>
+                        ${ch.intent ? `<small class="choice-intent-text">${ch.intent}</small>` : ''}
+                      </div>
+                    </button>
+                  `,
+                    )
+                    .join('')}
                 </div>
-
-                <!-- 默认折叠的提示抽屉 -->
-                ${
-                  appState.showHintsDrawer
-                    ? `
-                  <div class="choices-stack hints-drawer-expanded">
-                    ${(scene.hintSuggestions || scene.choices || [])
-                      .map(
-                        (ch, idx) => `
-                      <button class="vn-choice-btn" data-hint-index="${idx}">
-                        <span class="tag tag-支线">思路 ${idx + 1}</span>
-                        <div class="choice-text-col">
-                          <strong class="choice-title-text">${ch.label}</strong>
-                          ${ch.intent ? `<small class="choice-intent-text">${ch.intent}</small>` : ''}
-                        </div>
-                      </button>
-                    `,
-                      )
-                      .join('')}
-                  </div>
-                `
-                    : ''
-                }
 
                 <!-- 核心：自由聊天输入 Console -->
                 <form id="free-action-form" class="free-console-bar primary-chat-bar">
