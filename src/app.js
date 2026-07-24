@@ -737,7 +737,10 @@ const ENDINGS = {
 
 // 5. 应用状态
 let appState = {
-  view: 'start',
+  view: 'preload',
+  preloadProgress: 0,
+  preloadCurrentText: '正在连接魔王城资源服务器...',
+  isPreloadingComplete: false,
   currentSceneKey: 'gate',
   showDevStats: false,
   showHintsDrawer: false,
@@ -954,9 +957,60 @@ function generateFateCauses(stats, flags, history) {
   ];
 }
 
+// 0. 全量图片资源预加载清单 (移动端流畅体验护航)
+const PRELOAD_ASSETS = [
+  { url: './assets/start_poster_v.png', name: '首页剧本海报' },
+  { url: './assets/demon_castle_gate_v.png', name: '魔王城正面大门' },
+  { url: './assets/collapsed_ruins.png', name: '前庭坍塌废墟' },
+  { url: './assets/demon_dungeon_v.png', name: '地下暗黑地牢' },
+  { url: './assets/forbidden_library_v.png', name: '禁忌图书馆' },
+  { url: './assets/demon_treasury_v.png', name: '偏殿皇家宝库' },
+  { url: './assets/vanguard_corridor_v.png', name: '近卫军决死长廊' },
+  { url: './assets/empty_throne_v.png', name: '魔王空王座厅' },
+  { url: './assets/ending_demon_king_death.png', name: '伏诛结局血光CG' },
+  { url: './assets/char_aslan.png', name: '主角阿斯兰军师立绘' },
+  { url: './assets/char_aslan_panicked.png', name: '主角慌张表情立绘' },
+  { url: './assets/char_leon.png', name: '勇者莱昂立绘' },
+  { url: './assets/char_ivette.png', name: '法师伊薇特立绘' },
+  { url: './assets/char_mira.png', name: '牧师米拉立绘' },
+  { url: './assets/char_locke.png', name: '盗贼洛克立绘' },
+  { url: './assets/char_victor.png', name: '副官维克托立绘' },
+];
+
+function preloadAllAssets() {
+  let loadedCount = 0;
+  const total = PRELOAD_ASSETS.length;
+
+  PRELOAD_ASSETS.forEach((asset) => {
+    const img = new Image();
+    const onDone = () => {
+      loadedCount++;
+      appState.preloadProgress = Math.round((loadedCount / total) * 100);
+      appState.preloadCurrentText = `正在预装高清资产 (${loadedCount}/${total}): ${asset.name}`;
+      render();
+
+      if (loadedCount >= total) {
+        appState.isPreloadingComplete = true;
+        setTimeout(() => {
+          if (appState.view === 'preload') {
+            appState.view = 'start';
+            render();
+          }
+        }, 350);
+      }
+    };
+    img.onload = onDone;
+    img.onerror = onDone;
+    img.src = asset.url;
+  });
+}
+
 function resetGame() {
   appState = {
     view: 'start',
+    preloadProgress: 100,
+    preloadCurrentText: '准备完毕',
+    isPreloadingComplete: true,
     currentSceneKey: 'gate',
     showDevStats: false,
     showHintsDrawer: false,
@@ -974,13 +1028,49 @@ function render() {
   const rootElement = document.getElementById('root');
   if (!rootElement) return;
 
-  if (appState.view === 'start') {
+  if (appState.view === 'preload') {
+    renderPreloadView(rootElement);
+  } else if (appState.view === 'start') {
     renderStartView(rootElement);
   } else if (appState.view === 'play') {
     renderPlayView(rootElement);
   } else if (appState.view === 'result') {
     renderResultView(rootElement);
   }
+}
+
+function renderPreloadView(root) {
+  root.innerHTML = `
+    <main class="full-screen-app preload-screen">
+      <div class="bg-canvas" style="background-image: url('./assets/start_poster_v.png'); filter: blur(10px) brightness(0.35);"></div>
+      <div class="bg-vignette-overlay"></div>
+
+      <div class="screen-content preload-content">
+        <header class="title-header" style="text-align: center;">
+          <span class="game-tag-pill">What-If Life Simulator · 引擎初始化</span>
+          <h1 class="glow-title" style="font-size: 22px; margin-top: 10px;">假如我是爽文小说中的反派...</h1>
+          <p class="tagline">正在优化移动端高清场景与全景透明立绘...</p>
+        </header>
+
+        <div style="flex: 1;"></div>
+
+        <section class="preload-card">
+          <div class="preload-status-row">
+            <span class="preload-percent-text">${appState.preloadProgress}%</span>
+            <span class="preload-spin-icon">🔮</span>
+          </div>
+
+          <div class="preload-progress-track">
+            <div class="preload-progress-fill" style="width: ${appState.preloadProgress}%;"></div>
+          </div>
+
+          <p class="preload-subtext">${appState.preloadCurrentText}</p>
+        </section>
+
+        <div style="flex: 0.3;"></div>
+      </div>
+    </main>
+  `;
 }
 
 // ---------------------------------------------------------------------------
@@ -1101,9 +1191,9 @@ function renderPlayView(root) {
         
         <!-- 极简顶部状态栏 -->
         <header class="minimal-top-bar">
-          <div class="top-bar-left">
+          <div class="scene-title-group">
             <span class="act-badge">Act ${scene.act}/5</span>
-            <span class="location-badge">${scene.locationName || '魔王城'}</span>
+            <span class="location-title">${scene.locationName || '魔王城'}</span>
           </div>
           <button id="dev-stats-toggle" class="dev-icon-btn" title="查看局势与设置">⚙️</button>
         </header>
@@ -1147,7 +1237,6 @@ function renderPlayView(root) {
             <div class="speaker-ribbon-badge">
               <strong class="speaker-ribbon-name" style="color: ${currentSpeaker.color};">${currentSpeaker.id === 'aslan' ? '阿斯兰 (我)' : currentSpeaker.name}</strong>
               ${currentSpeaker.id !== 'narrator' && currentSpeaker.role ? `<span class="speaker-ribbon-tag">${currentSpeaker.tagIcon || '⚔️'} ${currentSpeaker.role}</span>` : ''}
-              ${currentSpeaker.id !== 'narrator' && currentDialogue.emotion ? `<span class="speaker-ribbon-emotion">· ${currentDialogue.emotion} ${isPanickedEmotion ? '💧 (汗流浃背)' : ''}</span>` : ''}
             </div>
 
             <div class="dialogue-card-body">
@@ -1354,3 +1443,4 @@ function renderResultView(root) {
 }
 
 render();
+preloadAllAssets();
