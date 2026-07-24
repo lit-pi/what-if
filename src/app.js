@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// 《假如我是勇者队伍里的卧底魔王》- Silicon Factory 官方 12 维人格库 + 震撼场景破绽
+// 《假如我是勇者队伍里的卧底魔王》- 沉浸式暗黑奇幻 RPG 剧本原型
 // ---------------------------------------------------------------------------
 
 // 1. 初始全局局势状态
@@ -27,7 +27,7 @@ const STAT_METADATA = {
   butterflyDeviation: { label: '蝴蝶偏离', tone: 'mystic', icon: '🦋' },
 };
 
-// 2. 官方 Silicon Factory (硅基工厂 / 人格库) 12 维完整人格 Schema 模型 + 魔幻剧本扩展维度
+// 2. 官方 Silicon Factory (硅基工厂 / 人格库) 12 维完整人格 Schema 模型 (后台驱动)
 const CHARACTERS = {
   aslan: {
     id: 'aslan',
@@ -39,7 +39,6 @@ const CHARACTERS = {
     color: '#c77dff',
     tagIcon: '👑',
     desc: '第七代魔王 · 伪装成流浪圣骑士',
-    // 12 维官方 Schema 模型:
     dimensionModel: {
       identity: { name: '阿斯兰 (夜冠之主)', age: 320, gender: 'male', location: '魔王城王座厅', occupation: '第七代魔王 / 伪装流浪圣骑士', education: '黑曜远古魔学术库', lifeStage: '两界治理与和平探索阶段', socialRoles: ['夜冠之主', '勇者队战术核心', '假圣骑士'] },
       socioeconomicContext: { incomeLevel: '掌管三百年魔界军饷', livingArea: '魔王城内殿', cityTier: '魔界都城', culturalHabits: ['习惯深思后发言', '用魔族倒装语法暗号'], languageStyle: '表面庄严圣洁，内心频繁爆笑吐槽' },
@@ -227,9 +226,9 @@ const INITIAL_FLAGS = {
   miraBufferedCrisis: false,
 };
 
-// 3. 场景树与大戏剧性“突发破绽事件” (Dramatic Per-Scene Mishap System)
+// 3. 场景树与大戏剧性“突发破绽事件”
 const SCENE_TREE = {
-  // 第 1 幕：城门大门 (魔皇结界认主爆笑剧烈破绽!)
+  // 第 1 幕：城门大门
   gate: {
     id: 'gate',
     act: 1,
@@ -296,7 +295,7 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 2A 幕：前庭坍塌废墟 (破门路线)
+  // 第 2A 幕：前庭坍塌废墟
   act2_ruins: {
     id: 'act2_ruins',
     act: 2,
@@ -348,7 +347,7 @@ const SCENE_TREE = {
     ],
   },
 
-  // 第 2B 幕：地下暗黑地牢 (暗道路线)
+  // 第 2B 幕：地下暗黑地牢
   act2_dungeon: {
     id: 'act2_dungeon',
     act: 2,
@@ -630,7 +629,7 @@ let appState = {
   ending: null,
 };
 
-// 6. 基于 Silicon Factory 12 维模型的 AI 自由对话评估器
+// 6. 基于 AI 人格模型的自由对话评估器
 function adjudicateFreeAction(inputText) {
   const text = inputText.trim().toLowerCase();
   const currentScene = SCENE_TREE[appState.currentSceneKey];
@@ -646,7 +645,7 @@ function adjudicateFreeAction(inputText) {
   else if (/旅游|公司|董事长|经营|搞钱/.test(text)) category = 'absurd';
 
   const results = {
-    confess: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'disaster_failure', nextSceneId: null, endingKey: 'exposed', narration: `你选择直接摊牌：“${inputText}”。全场一片死寂，莱昂与同伴基于各自 12 维信仰当场拔剑！`, delta: { exposureRisk: 50, heroTrust: -40, priestRedemption: 8, partyProgress: 15 }, flagUpdates: { set: { confessedIdentity: true, proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'leon', emotion: '震怒拔剑', content: '真没想到，魔王居然就在我们身边！' }] },
+    confess: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'disaster_failure', nextSceneId: null, endingKey: 'exposed', narration: `你选择直接摊牌：“${inputText}”。全场一片死寂，莱昂与同伴基于各自信仰当场拔剑！`, delta: { exposureRisk: 50, heroTrust: -40, priestRedemption: 8, partyProgress: 15 }, flagUpdates: { set: { confessedIdentity: true, proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'leon', emotion: '震怒拔剑', content: '真没想到，魔王居然就在我们身边！' }] },
     peace: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你展现出理性的谈判愿景：“${inputText}”。结合莱昂与米拉的道德罗盘，全队陷入深思。`, delta: { priestRedemption: 12, exposureRisk: 10, mageEvidence: 8, partyProgress: 15 }, flagUpdates: { set: { proposedPeace: true, peacePivoted: true } }, dialogues: [{ characterId: 'mira', emotion: '目光微亮', content: '如果能避免流血，这或许是最好的选择！' }] },
     deceive: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你运用古籍知识阐述了观点：“${inputText}”。通过了伊薇特的初步逻辑审查，但疑点仍在积累。`, delta: { exposureRisk: -3, mageEvidence: 10, partyProgress: 15 }, flagUpdates: { increment: { majorLieCount: 1, contradictionCount: 1 } }, dialogues: [{ characterId: 'ivette', emotion: '推了推眼镜', content: '这个说法的逻辑大致能自洽，但我会继续复核。' }] },
     protect: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你践行了骑士的守护真谛：“${inputText}”。契合莱昂与米拉的价值观，信任度上升。`, delta: { heroTrust: 8, priestRedemption: 10, exposureRisk: 4, partyProgress: 15 }, flagUpdates: { increment: { protectedInnocentsCount: 1 } }, dialogues: [{ characterId: 'mira', emotion: '双手合十', content: '阿斯兰的心灵始终向着光明与善良！' }] },
@@ -654,7 +653,7 @@ function adjudicateFreeAction(inputText) {
     commandVictor: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你用隐秘暗号传令副官：“${inputText}”。维克托脑补了陛下的大棋，迅速配合撤退。`, delta: { victorMisread: -12, exposureRisk: -2, castleIntegrity: 8, partyProgress: 15 }, flagUpdates: { increment: { resolvedMajorCrisisCount: 1 } }, dialogues: [{ characterId: 'victor', emotion: '狂热领命', content: '遵命！属下绝不拖陛下的神圣大谋后腿！' }] },
     bribe: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你向洛克提出了利益条件：“${inputText}”。精准击中盗贼的价值取向，情报风险被抹平。`, delta: { thiefLeverage: -15, exposureRisk: -2, partyProgress: 15 }, flagUpdates: { set: { bribedLocke: true } }, dialogues: [{ characterId: 'locke', emotion: '收下金币', content: '合作愉快！你的秘密在我这绝对安全！' }] },
     absurd: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你提出了极其离谱的经营想法：“${inputText}”。现场空气安静了三秒，世界线剧烈偏离！`, delta: { butterflyDeviation: 25, exposureRisk: 5, heroTrust: 2, partyProgress: 15 }, flagUpdates: {}, dialogues: [{ characterId: 'leon', emotion: '呆滞愣住', content: '啊？在魔王城开地下城主题公园？' }] },
-    generic: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你尝试了特别行动：“${inputText}”。结合 5 人 12 维人格综合判断，局势产生微妙变动。`, delta: { exposureRisk: 4, heroTrust: 3, butterflyDeviation: 5, partyProgress: 15 }, flagUpdates: {}, dialogues: [{ characterId: 'leon', emotion: '警惕观察', content: '有意思的战术试探。' }] },
+    generic: { actionLabel: `自由表述: "${inputText}"`, adjudication: 'costly_success', nextSceneId: currentScene.choices[0]?.nextSceneId || 'act4_corridor', narration: `你尝试了特别行动：“${inputText}”。结合 5 人性格综合判断，局势产生微妙变动。`, delta: { exposureRisk: 4, heroTrust: 3, butterflyDeviation: 5, partyProgress: 15 }, flagUpdates: {}, dialogues: [{ characterId: 'leon', emotion: '警惕观察', content: '有意思的战术试探。' }] },
   };
 
   return results[category];
@@ -718,7 +717,7 @@ function applyTurn(choiceData) {
   appState.lastTurn = turnRecord;
   appState.dialogueIndex = 0;
 
-  // 场景专属即时败北大结局判定 (Scene-Specific Instant Failure Check)
+  // 场景专属即时败北大结局判定
   if (choiceData.endingKey || choiceData.adjudication === 'disaster_failure' || appState.stats.exposureRisk >= 75 || appState.stats.mageEvidence >= 65) {
     if (choiceData.endingKey && ENDINGS[choiceData.endingKey]) {
       appState.ending = ENDINGS[choiceData.endingKey];
@@ -794,7 +793,7 @@ function determineEnding(stats, flags) {
 function generateFateCauses(stats, flags, history) {
   let riskCause = '你这一路上保持了极其谨慎的隐蔽战术，未留下重大要害突破口。';
   if (stats.mageEvidence >= 65) {
-    riskCause = '法师伊薇特根据 12 维逻辑搜集了过多不可解的魔力余烬证据，成为悬在头顶的最大利剑。';
+    riskCause = '法师伊薇特搜集了过多不可解的魔力余烬证据，成为悬在头顶的最大利剑。';
   } else if (stats.exposureRisk >= 65) {
     riskCause = '多次破绽与口误的累积，让全队基于各自价值观对你流浪圣骑士身份的怀疑达到了崩溃临界点。';
   } else if (stats.victorMisread >= 70) {
@@ -862,7 +861,7 @@ function render() {
 }
 
 // ---------------------------------------------------------------------------
-// 1. 全屏 9:16 - 电影海报级全屏沉浸首屏
+// 1. 全屏 9:16 - 电影海报级全屏沉浸首屏 (纯沉浸式 RPG 游戏文本)
 // ---------------------------------------------------------------------------
 function renderStartView(root) {
   root.innerHTML = `
@@ -872,7 +871,7 @@ function renderStartView(root) {
 
       <div class="screen-content">
         <header class="title-header">
-          <span class="game-tag-pill">What-If Life Simulator · 硅基工厂 12 维人格库</span>
+          <span class="game-tag-pill">What-If Life Simulator · 暗黑奇幻高概念剧本</span>
           <h1 class="glow-title">假如我是勇者队伍里的卧底魔王</h1>
           <p class="tagline">“我是魔王本人，伪装成圣骑士混进勇者队。现在队伍已经打到了我的魔王城门口……”</p>
         </header>
@@ -880,15 +879,15 @@ function renderStartView(root) {
         <div style="flex: 1;"></div>
 
         <section class="poster-brief-card">
-          <strong>👑 硅基工厂 12 维 AI 角色挑战</strong>
+          <strong>👑 阿斯兰 · 卧底魔王潜伏契约</strong>
           <p>
-            勇者队 5 位同伴搭载了完整的 12 维人格与独立思考引擎！自由输入聊天向同伴解释突发破绽，也可展开“💡 建议提示”寻求表达灵感。靠智慧撑到王座大殿吧！
+            你带着勇者小队打到了自家魔王城大门口！5 位同伴各怀心思，每个场景都暗藏致命破绽与突发危机。自由输入聊天向同伴解释破绽，也可展开“💡 建议提示”寻找灵感。全凭你的智慧与口才撑到王座大殿！
           </p>
         </section>
 
         <footer class="bottom-action-bar" style="margin-top: 10px;">
           <button id="start-game-btn" class="glow-primary-btn pulse">
-            <span>💬 开启自由对话潜伏 (12 维 AI 对戏)</span>
+            <span>💬 开启自由对话潜伏 (步步惊心 · 悬疑对戏)</span>
           </button>
         </footer>
       </div>
@@ -975,7 +974,7 @@ function renderPlayView(root) {
             <span class="act-badge">Act ${scene.act}/5</span>
             <span class="location-badge">📍 ${scene.locationName || '魔王城'}</span>
             <strong class="intro-title">${scene.title}</strong>
-            <button id="dev-stats-toggle" class="dev-icon-btn" title="查看 12 维状态与全局指标">⚙️ 12维</button>
+            <button id="dev-stats-toggle" class="dev-icon-btn" title="查看隐性局势指标">⚙️ 局势</button>
           </div>
           <p class="intro-prompt-text">${scene.briefPrompt}</p>
           
@@ -983,12 +982,12 @@ function renderPlayView(root) {
           ${scene.sceneMishap ? `<div class="intro-mishap-box">${scene.sceneMishap}</div>` : ''}
         </header>
 
-        <!-- 12 维人格与开发者监控 Popover -->
+        <!-- 局势与开发者监控 Popover -->
         ${
           appState.showDevStats
             ? `
           <div class="dev-stats-popover">
-            <div class="popover-title">🧬 Silicon Factory 12 维 NPC 态度评估</div>
+            <div class="popover-title">⚙️ 同伴态度与隐性局势监控</div>
             <div class="popover-grid">
               ${Object.entries(appState.stats)
                 .map(([k, v]) => `<div><span>${STAT_METADATA[k] ? STAT_METADATA[k].label : k}:</span> <strong>${v}</strong></div>`)
@@ -1009,10 +1008,10 @@ function renderPlayView(root) {
             <div class="adjudication-pill adj-${lastTurn.adjudication}">
               ${
                 lastTurn.adjudication === 'success'
-                  ? '✨ 12维思考裁决: 表达说服同伴'
+                  ? '✨ 思考裁决: 表达说服同伴'
                   : lastTurn.adjudication === 'costly_success'
-                  ? '⚡ 12维思考裁决: 付出代价化解'
-                  : '🔥 12维思考裁决: 严重破绽 · 身份败露'
+                  ? '⚡ 思考裁决: 付出代价化解'
+                  : '🔥 思考裁决: 严重破绽 · 身份败露'
               }: ${lastTurn.actionLabel}
             </div>
           `
@@ -1036,7 +1035,7 @@ function renderPlayView(root) {
               <div class="advance-cue">
                 ${
                   isLastDialogue
-                    ? '<span>💬 12 维 AI 已就位 · 请输入解释与行动</span>'
+                    ? '<span>💬 请输入你的口才解释与行动描述</span>'
                     : '<span>▼ 点击任意位置继续 (' + (appState.dialogueIndex + 1) + '/' + dialogueQueue.length + ')</span>'
                 }
               </div>
@@ -1200,7 +1199,7 @@ function renderResultView(root) {
 
         <section class="glass-card fate-causes-card">
           <div class="card-title-row">
-            <h3>📜 硅基工厂 12 维因果审判记录</h3>
+            <h3>📜 终局命运因果审判记录</h3>
           </div>
           <div class="causes-stack">
             ${causes
@@ -1221,7 +1220,7 @@ function renderResultView(root) {
 
         <footer class="bottom-action-bar">
           <button id="restart-game-btn" class="glow-primary-btn pulse">
-            <span>🔄 再战一局 · 重新潜伏 (12 维 AI 对戏)</span>
+            <span>🔄 再战一局 · 重新潜伏 (悬疑对戏)</span>
           </button>
         </footer>
 
