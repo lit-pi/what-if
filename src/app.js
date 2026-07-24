@@ -690,7 +690,7 @@ function triggerSceneTransition(nextSceneKey, callback) {
     appState.showHintsDrawer = false;
     if (callback) callback();
     render();
-  }, 1000);
+  }, 3200);
 }
 
 function applyTurn(choiceData) {

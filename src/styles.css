@@ -539,15 +539,15 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  animation: transCardFade 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  padding: 28px;
+  animation: transCardFade 3.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 @keyframes transCardFade {
-  0% { opacity: 0; }
-  25% { opacity: 1; }
-  75% { opacity: 1; }
-  100% { opacity: 0; }
+  0% { opacity: 0; transform: scale(0.98); }
+  15% { opacity: 1; transform: scale(1); }
+  85% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
 }
 
 .transition-inner { text-align: center; }
