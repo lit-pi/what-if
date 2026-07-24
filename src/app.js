@@ -750,7 +750,7 @@ let appState = {
 function adjudicateFreeAction(inputText) {
   const text = inputText.trim().toLowerCase();
   const currentScene = SCENE_TREE[appState.currentSceneKey];
-  
+
   let category = 'generic';
   if (/魔王|身份|坦白|承认|摊牌|不装了/.test(text)) category = 'confess';
   else if (/停战|和平|谈判|共治|条约|讲和/.test(text)) category = 'peace';
@@ -996,18 +996,16 @@ function renderStartView(root) {
           <p class="tagline">“本来只想混个卧底摸鱼，谁知道一不小心混成了勇者队的战力天花板……”</p>
         </header>
 
-        <div style="flex: 0.5;"></div>
+        <div style="flex: 1;"></div>
 
-        <section class="poster-brief-card">
+        <section class="poster-brief-card" style="margin-bottom: 20px;">
           <strong>阿斯兰 · 卧底魔王潜伏契约</strong>
           <p>
             眼看勇者小队一路横推、直接骑到了自家魔王城头上！既要当好带头大哥带队攻城，又要背地里帮呆萌部下打掩护。不被当场抓包、保全魔王城并撑到王座大殿，即算终极通关！
           </p>
         </section>
 
-        <div style="flex: 0.5;"></div>
-
-        <footer class="bottom-action-bar" style="margin-top: 10px;">
+        <footer class="bottom-action-bar">
           <button id="start-game-btn" class="glow-primary-btn pulse">
             <span>步步惊心 · 悬疑对战</span>
           </button>
@@ -1070,9 +1068,8 @@ function renderPlayView(root) {
   root.innerHTML = `
     <main class="full-screen-app play-screen">
       <!-- 1. 幕数黑屏转场 Card -->
-      ${
-        appState.isSceneTransitioning
-          ? `
+      ${appState.isSceneTransitioning
+      ? `
         <div class="rpg-scene-transition-card">
           <div class="transition-inner">
             <span class="trans-act">ACT 0${transScene.act}/05</span>
@@ -1081,8 +1078,8 @@ function renderPlayView(root) {
           </div>
         </div>
       `
-          : ''
-      }
+      : ''
+    }
 
       <!-- 9:16 全屏场景背景图 -->
       <div class="bg-canvas" style="background-image: url('${scene.bgImage || './assets/demon_castle_gate_v.png'}');"></div>
@@ -1090,11 +1087,10 @@ function renderPlayView(root) {
 
       <!-- 2. 核心：透明背景抠图人物立绘 (如果魔王慌张则叠加晃动与汗水特效) -->
       <div class="huge-character-stage">
-        ${
-          speakerImage
-            ? `<img src="${speakerImage}" class="huge-character-portrait-img cutout-transparent ${isPanickedEmotion ? 'panicked-portrait-img' : ''}" alt="${currentSpeaker.name}" />`
-            : ''
-        }
+        ${speakerImage
+      ? `<img src="${speakerImage}" class="huge-character-portrait-img cutout-transparent ${isPanickedEmotion ? 'panicked-portrait-img' : ''}" alt="${currentSpeaker.name}" />`
+      : ''
+    }
       </div>
 
       <!-- 3. 游玩 UI 层 -->
@@ -1110,40 +1106,37 @@ function renderPlayView(root) {
         </header>
 
         <!-- 局势监控 Popover -->
-        ${
-          appState.showDevStats
-            ? `
+        ${appState.showDevStats
+      ? `
           <div class="dev-stats-popover">
             <div class="popover-title">⚙️ 同伴态度与隐性局势监控</div>
             <div class="popover-grid">
               ${Object.entries(appState.stats)
-                .map(([k, v]) => `<div><span>${STAT_METADATA[k] ? STAT_METADATA[k].label : k}:</span> <strong>${v}</strong></div>`)
-                .join('')}
+        .map(([k, v]) => `<div><span>${STAT_METADATA[k] ? STAT_METADATA[k].label : k}:</span> <strong>${v}</strong></div>`)
+        .join('')}
             </div>
           </div>
         `
-            : ''
-        }
+      : ''
+    }
 
         <!-- 4. 屏幕下方舞台与 JRPG 暗黑金边对话框 -->
         <div class="img2797-bottom-stage">
           
           <!-- 上回合裁决 Badge -->
-          ${
-            lastTurn && appState.dialogueIndex === 0
-              ? `
+          ${lastTurn && appState.dialogueIndex === 0
+      ? `
             <div class="adjudication-pill adj-${lastTurn.adjudication}">
-              ${
-                lastTurn.adjudication === 'success'
-                  ? '✨ 思考裁决: 表达说服同伴'
-                  : lastTurn.adjudication === 'costly_success'
-                  ? '⚡ 思考裁决: 付出代价化解'
-                  : '🔥 思考裁决: 严重破绽 · 身份败露'
-              }: ${lastTurn.actionLabel}
+              ${lastTurn.adjudication === 'success'
+        ? '✨ 思考裁决: 表达说服同伴'
+        : lastTurn.adjudication === 'costly_success'
+          ? '⚡ 思考裁决: 付出代价化解'
+          : '🔥 思考裁决: 严重破绽 · 身份败露'
+      }: ${lastTurn.actionLabel}
             </div>
           `
-              : ''
-          }
+      : ''
+    }
 
           <!-- 核心：JRPG 典雅暗黑金边对话框 -->
           <div class="rpg-dialogue-box">
@@ -1160,22 +1153,20 @@ function renderPlayView(root) {
 
             <div class="dialogue-footer-bar">
               <div class="advance-cue">
-                ${
-                  isLastDialogue
-                    ? (lastTurn
-                        ? '<span>⚡ 点击屏幕任意位置转场 ▶</span>'
-                        : '<span>💬 请选择建议或输入你的隐秘行动</span>')
-                    : '<span>▼ 点击任意位置继续 (' + (appState.dialogueIndex + 1) + '/' + dialogueQueue.length + ')</span>'
-                }
+                ${isLastDialogue
+      ? (lastTurn
+        ? '<span>⚡ 点击屏幕任意位置转场 ▶</span>'
+        : '<span>💬 请选择建议或输入你的隐秘行动</span>')
+      : '<span>▼ 点击任意位置继续 (' + (appState.dialogueIndex + 1) + '/' + dialogueQueue.length + ')</span>'
+    }
               </div>
             </div>
 
           </div>
 
           <!-- 5. 自由聊天主导控制台 + 折叠式 💡 建议提示 Drawer -->
-          ${
-            shouldShowControls && !lastTurn
-              ? `
+          ${shouldShowControls && !lastTurn
+      ? `
             <footer class="img2797-choice-deck deck-visible">
               <!-- 提示选项切换按钮 (默认隐藏) -->
               <div class="hints-drawer-toggle-row">
@@ -1185,13 +1176,12 @@ function renderPlayView(root) {
               </div>
 
                 <!-- 经典建议选项卡片 (展开后呈现) -->
-                ${
-                  appState.showHintsDrawer
-                    ? `
+                ${appState.showHintsDrawer
+        ? `
                   <div class="choices-stack hints-drawer-expanded">
                     ${scene.choices
-                      .map(
-                        (ch, idx) => `
+          .map(
+            (ch, idx) => `
                       <button class="vn-choice-btn ${ch.riskTag === '支线' ? 'side-quest-btn' : ''}" data-hint-index="${idx}">
                         <div class="choice-text-col">
                           <strong class="choice-title-text">${ch.label}</strong>
@@ -1199,12 +1189,12 @@ function renderPlayView(root) {
                         </div>
                       </button>
                     `,
-                      )
-                      .join('')}
+          )
+          .join('')}
                   </div>
                 `
-                    : ''
-                }
+        : ''
+      }
 
                 <!-- 核心：自由聊天输入 Console -->
                 <form id="free-action-form" class="free-console-bar primary-chat-bar">
@@ -1216,8 +1206,8 @@ function renderPlayView(root) {
                 </form>
             </footer>
           `
-              : ''
-          }
+      : ''
+    }
 
         </div>
 
@@ -1332,8 +1322,8 @@ function renderResultView(root) {
           </div>
           <div class="causes-stack">
             ${causes
-              .map(
-                (c) => `
+      .map(
+        (c) => `
               <div class="cause-card-item">
                 <span class="cause-icon">${c.icon}</span>
                 <div>
@@ -1342,8 +1332,8 @@ function renderResultView(root) {
                 </div>
               </div>
             `,
-              )
-              .join('')}
+      )
+      .join('')}
           </div>
         </section>
 
