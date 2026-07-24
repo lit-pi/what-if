@@ -35,7 +35,7 @@ const CHARACTERS = {
     name: '阿斯兰',
     role: '卧底魔王',
     avatar: '魔',
-    image: './assets/char_aslan.png',
+    image: './assets/char_aslan_knight.png',
     panickedImage: './assets/char_aslan_knight.png',
     knightImage: './assets/char_aslan_knight.png',
     color: '#c77dff',
@@ -890,7 +890,7 @@ function renderStartView(root) {
         <section class="poster-brief-card">
           <strong>阿斯兰 · 卧底魔王潜伏契约</strong>
           <p>
-            伪装成圣骑士带队攻打自家大本营！应对突发破绽与同伴怀疑，凭智慧与口才撑到王座大殿！
+            本来只想混个日子，结果因为表现过于优秀被一路推成勇者队核心，硬生生拉到了自家城门口！暗中保全城堡与部下且不当场暴露身份，成功撑到王座大殿达成共治即为通关胜利！
           </p>
         </section>
 
@@ -1070,21 +1070,35 @@ function renderPlayView(root) {
                 </button>
               `
                   : `
-                <div class="choices-stack">
-                  ${scene.choices
-                    .map(
-                      (ch, idx) => `
-                    <button class="vn-choice-btn ${ch.riskTag === '支线' ? 'side-quest-btn' : ''}" data-hint-index="${idx}">
-                      <span class="tag tag-${ch.riskTag || '稳妥'}">${ch.riskTag || '建议'}</span>
-                      <div class="choice-text-col">
-                        <strong class="choice-title-text">${ch.label}</strong>
-                        ${ch.intent ? `<small class="choice-intent-text">${ch.intent}</small>` : ''}
-                      </div>
-                    </button>
-                  `,
-                    )
-                    .join('')}
+                <!-- 提示选项切换按钮 (默认隐藏) -->
+                <div class="hints-drawer-toggle-row">
+                  <button id="toggle-hints-btn" class="hints-toggle-btn">
+                    <span>💡 表达灵感 / 提示建议 (${scene.choices.length}) ${appState.showHintsDrawer ? '▲ 收起' : '▼ 展开'}</span>
+                  </button>
                 </div>
+
+                <!-- 经典建议选项卡片 (展开后呈现) -->
+                ${
+                  appState.showHintsDrawer
+                    ? `
+                  <div class="choices-stack hints-drawer-expanded">
+                    ${scene.choices
+                      .map(
+                        (ch, idx) => `
+                      <button class="vn-choice-btn ${ch.riskTag === '支线' ? 'side-quest-btn' : ''}" data-hint-index="${idx}">
+                        <span class="tag tag-${ch.riskTag || '稳妥'}">${ch.riskTag || '建议'}</span>
+                        <div class="choice-text-col">
+                          <strong class="choice-title-text">${ch.label}</strong>
+                          ${ch.intent ? `<small class="choice-intent-text">${ch.intent}</small>` : ''}
+                        </div>
+                      </button>
+                    `,
+                      )
+                      .join('')}
+                  </div>
+                `
+                    : ''
+                }
 
                 <!-- 核心：自由聊天输入 Console -->
                 <form id="free-action-form" class="free-console-bar primary-chat-bar">
