@@ -36,7 +36,7 @@ const CHARACTERS = {
     role: '卧底魔王',
     avatar: '魔',
     image: './assets/char_aslan.png',
-    panickedImage: './assets/char_aslan.png',
+    panickedImage: './assets/char_aslan_panicked.png',
     knightImage: './assets/char_aslan.png',
     color: '#c77dff',
     tagIcon: '👑',
@@ -687,6 +687,7 @@ const SCENE_TREE = {
         endingKey: 'victorBlamed',
         nextSceneId: null,
         delta: { exposureRisk: -10, partyProgress: 100 },
+        flagUpdates: { set: { betrayedVictor: true } },
         narration: '你义正言辞推卸全责给维克托，远处的维克托感动落泪“能替陛下背锅是我毕生荣耀！”。',
         dialogues: [
           { characterId: 'victor', emotion: '热泪盈眶', content: '没错！一切坏事都是我维克托干的！与阿斯兰军师无关！' },
@@ -715,6 +716,8 @@ const SCENE_TREE = {
 // 4. 结局库 (场景专属即时大结局 + 终局结局)
 const ENDINGS = {
   gate_exposure_ending: { id: 'gate_exposure_ending', title: '第一幕：阵灵跪拜·当场伏诛', typeTag: '⚠️ 第一幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '在城门前阵灵高呼陛下时，你顺口应了一声！法师伊薇特法杖直指，莱昂震惊拔剑。你还没踏入城门半步，就在第一幕被勇者小队当场看破身份围攻伏诛！' },
+  instantExecution: { id: 'instantExecution', title: '当场伏诛', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你的行动直接击穿了勇者队最后的容忍线。莱昂拔出圣剑，伊薇特启动封印法阵，米拉也没能再替你争取解释机会。讨伐战在魔王城深处提前爆发，你的卧底身份以最糟糕的方式落幕。' },
+  instantArrest: { id: 'instantArrest', title: '证据闭环·当场逮捕', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '伊薇特手中的证据链彻底闭环，你的每一次解释都变成了新的矛盾。莱昂含怒封住退路，勇者队在王座前将你当场扣押。你还没来得及坐回王座，就先被押上了审判席。' },
   ruins_arrest_ending: { id: 'ruins_arrest_ending', title: '第二幕：前庭失口·当场逮捕', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '面对重伤的魔族小兵，你一时失口扶起他称呼“辛苦了，我的部下”。小兵下意识单膝下跪喊陛下。莱昂与全队瞬间拔剑，在第二幕前庭废墟将你当场扣押入狱！' },
   dungeon_rupture_ending: { id: 'dungeon_rupture_ending', title: '第二幕：地牢残忍·众叛亲离', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你在地牢企图对掌握证据的前王国军官残忍灭口！米拉与莱昂难以置信地退后，坚决阻止你的残暴行为。勇者小队的羁绊瞬间瓦解，讨伐战斗在第二幕提前爆发！' },
   library_seal_ending: { id: 'library_seal_ending', title: '第三幕：真名曝光·图书馆封印', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你编造了漏洞百出的法术谎言，法师伊薇特翻开三千年前的古籍当场连拆你 3 处矛盾！证据彻底闭环，你被禁忌图书馆的封印结界当场困死！' },
