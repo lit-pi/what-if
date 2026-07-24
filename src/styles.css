@@ -205,12 +205,11 @@ button {
   padding-bottom: 10px;
 }
 
-/* 规避头发/边缘镂空透出明亮背景的暗色烘托底罩 */
 .huge-character-stage::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 65%, rgba(8, 6, 12, 0.85) 0%, rgba(8, 6, 12, 0.4) 55%, transparent 80%);
+  background: radial-gradient(circle at 50% 80%, rgba(0, 0, 0, 0.3) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -220,8 +219,7 @@ button {
   max-width: 110%;
   object-fit: contain;
   object-position: bottom center;
-  mix-blend-mode: multiply;
-  filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 20px rgba(10, 8, 14, 0.9));
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.75)) brightness(1.08) contrast(1.05);
   animation: portraitPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 

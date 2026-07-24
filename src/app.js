@@ -32,7 +32,7 @@ const CHARACTERS = {
   narrator: { id: 'narrator', name: '旁白', role: '场景叙事', avatar: '📖', image: null, color: '#f0c36a', tagIcon: '📜', desc: '局势与场景旁白推演' },
   aslan: {
     id: 'aslan',
-    name: '阿斯兰',
+    name: '阿斯兰 (我)',
     role: '卧底魔王',
     avatar: '魔',
     image: './assets/char_aslan_knight.png',
@@ -316,7 +316,8 @@ const SCENE_TREE = {
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：【巧妙】用魔族密音下达封口令并救人', intent: '背对全队传音“假装昏迷”，顺利救人', type: 'save' },
-      { label: '💡 建议思路 2：【致命陷阱】关切失口喊出“辛苦了，我的部下”', intent: '当场曝光主仆身份', type: 'trap' },
+      { label: '💡 建议思路 2：【粗暴甩锅】声张“那不是生灵，是拟态怪陷阱”', intent: '以防守名义强行带全队绕过', type: 'deceive' },
+      { label: '💡 建议思路 3：【致命陷阱】关切失口喊出“辛苦了，我的部下”', intent: '当场曝光主仆身份', type: 'trap' },
     ],
     choices: [
       {
@@ -332,6 +333,20 @@ const SCENE_TREE = {
         dialogues: [
           { characterId: 'mira', emotion: '感动落泪', content: '阿斯兰！你连敌方伤员也救，你真的太善良了！' },
           { characterId: 'leon', emotion: '肃然起敬', content: '这就是圣骑士的仁慈！接下来我们去禁忌图书馆看看有没有线索！' },
+        ],
+      },
+      {
+        id: 'ruins-blame-trap',
+        label: '【粗暴甩锅】声张“那不是生灵，是拟态怪陷阱”',
+        intent: '以防守名义强行诱导全队快速越过伤员',
+        riskTag: '冒险',
+        adjudication: 'costly_success',
+        nextSceneId: 'act3_library',
+        delta: { exposureRisk: 6, heroTrust: -5, partyProgress: 40 },
+        narration: '你严厉喝止众人“莫近此凶阵，那是魔界拟态怪伪装”，带队绕过伤员继续前进。虽然规避了暴露，但米拉面露失望。',
+        dialogues: [
+          { characterId: 'mira', emotion: '面露悲悯', content: '哪怕是敌人……重伤者也不至于被视为伪装怪物吧……' },
+          { characterId: 'leon', emotion: '推剑向前', content: '阿斯兰说的有道理，魔王城诡计多端，小心为上！' },
         ],
       },
       {
@@ -369,7 +384,8 @@ const SCENE_TREE = {
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：【机智】斩断枷锁并用圣光剑气引燃档案', intent: '救下队长并“不小心”烧掉名册', type: 'save' },
-      { label: '💡 建议思路 2：【致命陷阱】试图当众对知道秘密的军官灭口', intent: '引发队伍当场绝裂', type: 'trap' },
+      { label: '💡 建议思路 2：【暗度陈仓】暗塞镏金让洛克“撬错锁”放走军官', intent: '借盗贼之手暗中销毁档案放走军官', type: 'bribe' },
+      { label: '💡 建议思路 3：【致命陷阱】试图当众对知道秘密的军官灭口', intent: '引发队伍当场绝裂', type: 'trap' },
     ],
     choices: [
       {
@@ -385,6 +401,21 @@ const SCENE_TREE = {
         dialogues: [
           { characterId: 'mira', emotion: '感动落泪', content: '阿斯兰又救了一位我们的同胞！' },
           { characterId: 'ivette', emotion: '拍打火苗', content: '可恶，档案全烧焦了！不过前面好像是魔王城的地下宝库门！' },
+        ],
+      },
+      {
+        id: 'bribe-locke-dungeon',
+        label: '【暗度陈仓】暗塞镏金让洛克“撬错锁”放走绝密军官',
+        intent: '借盗贼之手暗中放人并顺手引燃了名册卷轴',
+        riskTag: '支线',
+        adjudication: 'success',
+        nextSceneId: 'act3_treasury',
+        delta: { thiefLeverage: -10, exposureRisk: -2, partyProgress: 40 },
+        flagUpdates: { set: { bribedLocke: true, freedDungeonCaptive: true } },
+        narration: '你暗中塞给洛克一袋重镏金币，洛克会意一笑，手起锁开“误触机关”放走了军官并引燃了卷轴。',
+        dialogues: [
+          { characterId: 'locke', emotion: '掂捏金币', content: '哎呀手滑撬错机关了！军官跑了卷轴烧了！哎呀哎呀~' },
+          { characterId: 'leon', emotion: '摇了摇头', content: '洛克你这手艺……罢了，能救出人就是好事！' },
         ],
       },
       {
@@ -423,7 +454,8 @@ const SCENE_TREE = {
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：利用古语法解释权混淆成救世英灵印记', intent: '倒装句解读，化解真名危机', type: 'deceive' },
-      { label: '💡 建议思路 2：【致命陷阱】编造漏洞百出的暗影邪术谎言', intent: '被伊薇特当场拆穿 3 处矛盾引发封印', type: 'trap' },
+      { label: '💡 建议思路 2：【暴力破局】一记圣光斩“失手”打爆真名石板', intent: '破坏证据毁尸灭迹', type: 'attack' },
+      { label: '💡 建议思路 3：【致命陷阱】编造漏洞百出的暗影邪术谎言', intent: '被伊薇特当场拆穿 3 处矛盾引发封印', type: 'trap' },
     ],
     choices: [
       {
@@ -439,6 +471,20 @@ const SCENE_TREE = {
         dialogues: [
           { characterId: 'ivette', emotion: '恍然大悟', content: '原来是双重倒装语法……我差一点就误解了这个符文！' },
           { characterId: 'leon', emotion: '大喜过望', content: '我就知道阿斯兰学识渊博！走，前面就是决死长廊！' },
+        ],
+      },
+      {
+        id: 'smash-slate-library',
+        label: '【暴力破局】一记圣光斩“失手”打爆真名石板',
+        intent: '借演示圣光威力失手轰烂真名石板，物理销毁证据',
+        riskTag: '冒险',
+        adjudication: 'costly_success',
+        nextSceneId: 'act4_corridor',
+        delta: { exposureRisk: 8, heroTrust: 5, castleIntegrity: -15, partyProgress: 70 },
+        narration: '你高呼“莫被邪阵魔力蛊惑”一记圣光斩直接打爆了符文石板！碎屑四溅，真名印记烟消云散。',
+        dialogues: [
+          { characterId: 'ivette', emotion: '灰头土脸', content: '咳咳！我的古籍石板！阿斯兰你太鲁莽了！' },
+          { characterId: 'leon', emotion: '抹了抹脸', content: '虽然鲁莽，但也消除了魔法陷阱！继续冲！' },
         ],
       },
       {
@@ -476,7 +522,8 @@ const SCENE_TREE = {
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：【巧妙】指引盗贼去拿装满幻术假币的特制宝箱', intent: '保护真私房钱，给洛克假宝箱', type: 'trick' },
-      { label: '💡 建议思路 2：【致命陷阱】情绪失控喊“住手！那是我修水管的钱！”', intent: '直接当场曝光', type: 'trap' },
+      { label: '💡 建议思路 2：【正色劝导】义正严词将全队引向神兵库兵器架', intent: '引导全队前往正门长廊，保护私房钱', type: 'guide' },
+      { label: '💡 建议思路 3：【致命陷阱】情绪失控喊“住手！那是我修水管的钱！”', intent: '直接当场曝光', type: 'trap' },
     ],
     choices: [
       {
@@ -492,6 +539,20 @@ const SCENE_TREE = {
         dialogues: [
           { characterId: 'locke', emotion: '抱紧金箱', content: '哈哈！阿斯兰你真是我的财神爷！这箱子藏得这么深都被你发现了！' },
           { characterId: 'leon', emotion: '拍拍翅膀', content: '干得好！走，前面就是魔王近卫守卫的长廊！' },
+        ],
+      },
+      {
+        id: 'treasury-guide-armory',
+        label: '【正色劝导】义正严词将全队引向神兵库兵器架',
+        intent: '严肃指出神兵库方向，把盗贼注意力从私房钱宝箱上引开',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act4_corridor',
+        delta: { heroTrust: 10, castleIntegrity: 20, exposureRisk: -2, partyProgress: 70 },
+        narration: '你严词喝道“贪图财宝乃圣骑士之耻，前方神兵库才有破城圣兵”，成功带队绕过了私房钱金库。',
+        dialogues: [
+          { characterId: 'leon', emotion: '正气凛然', content: '阿斯兰说得对！洛克把手放下，跟着我们继续前进！' },
+          { characterId: 'locke', emotion: '委屈缩手', content: '好吧好吧……听战术军师的！' },
         ],
       },
       {
@@ -530,7 +591,8 @@ const SCENE_TREE = {
     ],
     hintSuggestions: [
       { label: '💡 建议思路 1：【巧妙】暗中展示魔王戒章暗号平息自爆阵', intent: '高举戒章，平息近卫军狂暴', type: 'subdue' },
-      { label: '💡 建议思路 2：【致命陷阱】假戏真做大义灭亲强杀副官维克托', intent: '引爆绝杀大阵惨烈反噬', type: 'trap' },
+      { label: '💡 建议思路 2：【正面顶盾】张开圣光结界强行压制自爆魔力', intent: '挺身护住同伴，强行熄灭狂暴魔力', type: 'protect' },
+      { label: '💡 建议思路 3：【致命陷阱】假戏真做大义灭亲强杀副官维克托', intent: '引爆绝杀大阵惨烈反噬', type: 'trap' },
     ],
     choices: [
       {
@@ -546,6 +608,20 @@ const SCENE_TREE = {
         dialogues: [
           { characterId: 'victor', emotion: '当场单膝跪下', content: '至高无上的暗号……全军听令，立刻撤退，将战场留给陛下！' },
           { characterId: 'mira', emotion: '双手合十', content: '感谢晨曦圣光……浩劫被阻止了！前面就是王座大殿！' },
+        ],
+      },
+      {
+        id: 'sacred-shield-corridor',
+        label: '【正面顶盾】张开圣光结界强行压制自爆魔力',
+        intent: '以军师之姿顶在最前方张开神圣结界，压制近卫军自爆狂暴',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act5_throne',
+        delta: { heroTrust: 15, priestRedemption: 10, exposureRisk: -2, partyProgress: 90 },
+        narration: '你高举圣典张开万道光芒防盾，将自爆魔力强行中和压制，近卫军被震退入王座侧殿。',
+        dialogues: [
+          { characterId: 'leon', emotion: '极度感动', content: '阿斯兰！你一个人顶住了自爆大阵！太强了！' },
+          { characterId: 'ivette', emotion: '推了推眼镜', content: '虽然挡下了，但这圣光结界的纹路……怎么有点像魔阵倒转？' },
         ],
       },
       {
@@ -582,12 +658,14 @@ const SCENE_TREE = {
       { characterId: 'aslan', emotion: '解开披风·面色凝重', content: '（坐在王座前，按住剑柄）同伴们，我终于站回了我的王座前。现在，由我给出最后的答案。' },
     ],
     hintSuggestions: [
-      { label: '💡 建议思路：正式提出和平与两界共治方案', intent: '在王座前摊开停战契约，建立两界新秩序', type: 'peace' },
+      { label: '💡 建议思路 1：【和平方案】正式提出两界共治与停战草案', intent: '在王座前摊开停战契约，建立两界新秩序', type: 'peace' },
+      { label: '💡 建议思路 2：【甩锅大计】当场推给副官：“其实全是维克托干的！”', intent: '让忠诚副官背下所有恶名', type: 'blame' },
+      { label: '💡 建议思路 3：【高概念脑洞】提出“将魔王城改造成地下城主题乐园”', intent: '提议开开发地下城商业合作', type: 'absurd' },
     ],
     choices: [
       {
         id: 'negotiate-peace',
-        label: '正式提出和平与两界共治方案',
+        label: '【和平方案】正式提出两界共治与停战草案',
         intent: '在王座前摊开停战契约，建立两界新秩序',
         riskTag: '摊牌',
         adjudication: 'success',
@@ -600,20 +678,50 @@ const SCENE_TREE = {
           { characterId: 'leon', emotion: '缓缓收剑', content: '如果你能保证魔族永不南下，圣剑……可以不必染血。' },
         ],
       },
+      {
+        id: 'frame-victor-throne',
+        label: '【甩锅大计】当场推给副官：“其实全是维克托干的！”',
+        intent: '义正言辞宣布魔王早已隐退，现在搞事的全是副官维克托',
+        riskTag: '冒险',
+        adjudication: 'success',
+        endingKey: 'victorBlamed',
+        nextSceneId: null,
+        delta: { exposureRisk: -10, partyProgress: 100 },
+        narration: '你义正言辞推卸全责给维克托，远处的维克托感动落泪“能替陛下背锅是我毕生荣耀！”。',
+        dialogues: [
+          { characterId: 'victor', emotion: '热泪盈眶', content: '没错！一切坏事都是我维克托干的！与阿斯兰军师无关！' },
+          { characterId: 'leon', emotion: '恍然大悟', content: '原以为你是魔王，原来你也是被维克托蒙蔽的受害者！' },
+        ],
+      },
+      {
+        id: 'absurd-theme-park',
+        label: '【高概念脑洞】提出“将魔王城改造成地下城主题乐园”',
+        intent: '建议双方联合开发魔王城旅游资产，共赚门票钱',
+        riskTag: '支线',
+        adjudication: 'success',
+        endingKey: 'absurdAscension',
+        nextSceneId: null,
+        delta: { partyProgress: 100 },
+        narration: '你拿出了魔王城地下城旅游规划图纸，全队看傻了眼，三秒后洛克疯狂鼓掌赞同！',
+        dialogues: [
+          { characterId: 'locke', emotion: '狂拍大腿', content: '妙啊！门票三七分成！这比打打杀杀赚多了！' },
+          { characterId: 'leon', emotion: '彻底愣住', content: '居然还能这么搞？！那我当安全总监！' },
+        ],
+      },
     ],
   },
 };
 
 // 4. 结局库 (场景专属即时大结局 + 终局结局)
 const ENDINGS = {
-  gate_exposure_ending: { id: 'gate_exposure_ending', title: '第一幕：阵灵跪拜·当场伏诛', typeTag: '⚠️ 第一幕即时大结局', tone: 'danger', bgImage: './assets/black_holy_light.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '在城门前阵灵高呼陛下时，你顺口应了一声！法师伊薇特法杖直指，莱昂震惊拔剑。你还没踏入城门半步，就在第一幕被勇者小队当场看破身份围攻伏诛！' },
-  ruins_arrest_ending: { id: 'ruins_arrest_ending', title: '第二幕：前庭失口·当场逮捕', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/collapsed_ruins.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '面对重伤的魔族小兵，你一时失口扶起他称呼“辛苦了，我的部下”。小兵下意识单膝下跪喊陛下。莱昂与全队瞬间拔剑，在第二幕前庭废墟将你当场扣押入狱！' },
-  dungeon_rupture_ending: { id: 'dungeon_rupture_ending', title: '第二幕：地牢残忍·众叛亲离', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/demon_dungeon_v.png', heroPortrait: './assets/char_leon.png', narration: '你在地牢企图对掌握证据的前王国军官残忍灭口！米拉与莱昂难以置信地退后，坚决阻止你的残暴行为。勇者小队的羁绊瞬间瓦解，讨伐战斗在第二幕提前爆发！' },
-  library_seal_ending: { id: 'library_seal_ending', title: '第三幕：真名曝光·图书馆封印', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/forbidden_library_v.png', heroPortrait: './assets/char_ivette.png', narration: '你编造了漏洞百出的法术谎言，法师伊薇特翻开三千年前的古籍当场连拆你 3 处矛盾！证据彻底闭环，你被禁忌图书馆的封印结界当场困死！' },
-  treasury_confess_ending: { id: 'treasury_confess_ending', title: '第三幕：私房钱暴走·身份败露', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/demon_treasury_v.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '看着洛克拿走你积攒三年的私房钱，你失控大喊“住手！那是我换城堡水管的钱！”。全场静止三秒后，洛克与莱昂异口同声：“你管魔王宝库叫私房钱？！”' },
-  corridor_betrayal_ending: { id: 'corridor_betrayal_ending', title: '第四幕：决死长廊·自爆反噬', typeTag: '⚠️ 第四幕即时大结局', tone: 'danger', bgImage: './assets/vanguard_corridor_v.png', heroPortrait: './assets/char_victor.png', narration: '你选择强杀自己的忠诚副官维克托！维克托倒下前绝望惊呼“陛下为何杀我？”，引爆了整座长廊自爆大阵，魔王城深处沦为一片火海惨烈收场。' },
+  gate_exposure_ending: { id: 'gate_exposure_ending', title: '第一幕：阵灵跪拜·当场伏诛', typeTag: '⚠️ 第一幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '在城门前阵灵高呼陛下时，你顺口应了一声！法师伊薇特法杖直指，莱昂震惊拔剑。你还没踏入城门半步，就在第一幕被勇者小队当场看破身份围攻伏诛！' },
+  ruins_arrest_ending: { id: 'ruins_arrest_ending', title: '第二幕：前庭失口·当场逮捕', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '面对重伤的魔族小兵，你一时失口扶起他称呼“辛苦了，我的部下”。小兵下意识单膝下跪喊陛下。莱昂与全队瞬间拔剑，在第二幕前庭废墟将你当场扣押入狱！' },
+  dungeon_rupture_ending: { id: 'dungeon_rupture_ending', title: '第二幕：地牢残忍·众叛亲离', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你在地牢企图对掌握证据的前王国军官残忍灭口！米拉与莱昂难以置信地退后，坚决阻止你的残暴行为。勇者小队的羁绊瞬间瓦解，讨伐战斗在第二幕提前爆发！' },
+  library_seal_ending: { id: 'library_seal_ending', title: '第三幕：真名曝光·图书馆封印', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你编造了漏洞百出的法术谎言，法师伊薇特翻开三千年前的古籍当场连拆你 3 处矛盾！证据彻底闭环，你被禁忌图书馆的封印结界当场困死！' },
+  treasury_confess_ending: { id: 'treasury_confess_ending', title: '第三幕：私房钱暴走·身份败露', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '看着洛克拿走你积攒三年的私房钱，你失控大喊“住手！那是我换城堡水管的钱！”。全场静止三秒后，洛克与莱昂异口同声：“你管魔王宝库叫私房钱？！”' },
+  corridor_betrayal_ending: { id: 'corridor_betrayal_ending', title: '第四幕：决死长廊·自爆反噬', typeTag: '⚠️ 第四幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你选择强杀自己的忠诚副官维克托！维克托倒下前绝望惊呼“陛下为何杀我？”，引爆了整座长廊自爆大阵，魔王城深处沦为一片火海惨烈收场。' },
 
-  exposed: { id: 'exposed', title: '身份败露', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/black_holy_light.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '所有伪装在一瞬间崩塌。莱昂举剑对峙，伊薇特张开禁锢法阵，米拉难以置信地后退。你摘下银白头盔叹了口气：“好吧，讨伐会议提前开始。”' },
+  exposed: { id: 'exposed', title: '身份败露', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '所有伪装在一瞬间崩塌。莱昂举剑对峙，伊薇特张开禁锢法阵，米拉难以置信地后退。你摘下银白头盔叹了口气：“好吧，讨伐会议提前开始。”' },
   castleLost: { id: 'castleLost', title: '城在人亡', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/collapsed_ruins.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '你保住了魔王身份，却没能保住城堡。魔王城在战火中轰然倒塌，只剩王座和一间漏风的废墟。维克托建议将其改名为“极简主义魔王办公室”。' },
   dualRuler: { id: 'dualRuler', title: '双面共主', typeTag: '和平结局', tone: 'good', bgImage: './assets/empty_throne_v.png', heroPortrait: './assets/char_aslan_knight.png', narration: '人类不完全信你，魔族也不完全理解你。但两边都不得不承认，只有你能把这场大战讲成一场可执行的和平框架。你成为了两界唯一的沟通桥梁。' },
   redeemed: { id: 'redeemed', title: '被迫转正', typeTag: '和平结局', tone: 'good', bgImage: './assets/obsidian_balcony_v.png', heroPortrait: './assets/char_aslan.png', narration: '你原本只是想演个好人，结果演着演着真的不想毁灭世界了。莱昂邀请你加入新王国议会，你第一次认真思考：魔王能不能转岗成首席执政官？' },
@@ -1039,7 +1147,7 @@ function renderPlayView(root) {
           <div class="rpg-dialogue-box">
             
             <div class="speaker-ribbon-badge">
-              <strong class="speaker-ribbon-name" style="color: ${currentSpeaker.color};">${currentSpeaker.name}</strong>
+              <strong class="speaker-ribbon-name" style="color: ${currentSpeaker.color};">${currentSpeaker.id === 'aslan' ? '阿斯兰 (我)' : currentSpeaker.name}</strong>
               ${currentSpeaker.id !== 'narrator' && currentSpeaker.role ? `<span class="speaker-ribbon-tag">${currentSpeaker.tagIcon || '⚔️'} ${currentSpeaker.role}</span>` : ''}
               ${currentSpeaker.id !== 'narrator' && currentDialogue.emotion ? `<span class="speaker-ribbon-emotion">· ${currentDialogue.emotion} ${isPanickedEmotion ? '💧 (汗流浃背)' : ''}</span>` : ''}
             </div>
