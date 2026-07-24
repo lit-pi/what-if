@@ -1037,8 +1037,8 @@ function renderPlayView(root) {
             
             <div class="speaker-ribbon-badge">
               <strong class="speaker-ribbon-name" style="color: ${currentSpeaker.color};">${currentSpeaker.name}</strong>
-              <span class="speaker-ribbon-tag">${currentSpeaker.tagIcon || '⚔️'} ${currentSpeaker.role}</span>
-              <span class="speaker-ribbon-emotion">· ${currentDialogue.emotion || '神态凝重'} ${isPanickedEmotion ? '💧 (汗流浃背)' : ''}</span>
+              ${currentSpeaker.id !== 'narrator' && currentSpeaker.role ? `<span class="speaker-ribbon-tag">${currentSpeaker.tagIcon || '⚔️'} ${currentSpeaker.role}</span>` : ''}
+              ${currentSpeaker.id !== 'narrator' && currentDialogue.emotion ? `<span class="speaker-ribbon-emotion">· ${currentDialogue.emotion} ${isPanickedEmotion ? '💧 (汗流浃背)' : ''}</span>` : ''}
             </div>
 
             <div class="dialogue-card-body">
