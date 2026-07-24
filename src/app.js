@@ -671,20 +671,23 @@ function adjudicateFreeAction(inputText) {
 function triggerSceneTransition(nextSceneKey, callback) {
   appState.transitionTargetKey = nextSceneKey;
   appState.isSceneTransitioning = true;
-  render();
+
+  // 黑屏开始时，后台直接预先置入下一幕场景与重置对话，避免撤屏时跳动
+  if (nextSceneKey) {
+    appState.currentSceneKey = nextSceneKey;
+  }
+  appState.lastTurn = null;
+  appState.dialogueIndex = 0;
+  appState.showHintsDrawer = false;
+
+  render(); // 在黑幕护航下预渲染下一幕
 
   setTimeout(() => {
-    if (nextSceneKey) {
-      appState.currentSceneKey = nextSceneKey;
-    }
-    appState.lastTurn = null;
-    appState.dialogueIndex = 0;
     appState.isSceneTransitioning = false;
     appState.transitionTargetKey = null;
-    appState.showHintsDrawer = false;
     if (callback) callback();
     render();
-  }, 3200);
+  }, 2600);
 }
 
 function applyTurn(choiceData) {
@@ -882,7 +885,7 @@ function renderStartView(root) {
         <header class="title-header">
           <span class="game-tag-pill">What-If Life Simulator · 暗黑奇幻高概念剧本</span>
           <h1 class="glow-title">假如我是爽文小说中的反派...</h1>
-          <p class="tagline">“我是魔王本人，伪装成圣骑士混进勇者队。现在队伍已经打到了我的魔王城门口……”</p>
+          <p class="tagline">“本来只想混个卧底摸鱼，谁知道一不小心混成了勇者队的战力天花板……”</p>
         </header>
 
         <div style="flex: 1;"></div>
@@ -890,7 +893,7 @@ function renderStartView(root) {
         <section class="poster-brief-card">
           <strong>阿斯兰 · 卧底魔王潜伏契约</strong>
           <p>
-            本来只想混个日子，结果因为表现过于优秀被一路推成勇者队核心，硬生生拉到了自家城门口！暗中保全城堡与部下且不当场暴露身份，成功撑到王座大殿达成共治即为通关胜利！
+            眼看勇者小队一路横推、直接骑到了自家魔王城头上！既要当好带头大哥带队攻城，又要背地里帮呆萌部下打掩护。不被当场抓包、保全魔王城并撑到王座大殿，即算终极通关！
           </p>
         </section>
 
@@ -1146,6 +1149,14 @@ function renderPlayView(root) {
       if (appState.dialogueIndex < dialogueQueue.length - 1) {
         appState.dialogueIndex += 1;
         render();
+      } else if (lastTurn) {
+        if (lastTurn.nextSceneId) {
+          triggerSceneTransition(lastTurn.nextSceneId);
+        } else {
+          appState.ending = appState.ending || determineEnding(appState.stats, appState.flags);
+          appState.view = 'result';
+          render();
+        }
       }
     });
   }

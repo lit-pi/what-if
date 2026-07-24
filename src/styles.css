@@ -220,6 +220,7 @@ button {
   max-width: 110%;
   object-fit: contain;
   object-position: bottom center;
+  mix-blend-mode: multiply;
   filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 20px rgba(10, 8, 14, 0.9));
   animation: portraitPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
@@ -594,7 +595,8 @@ button {
   height: 75%;
   max-width: 100%;
   object-fit: contain;
-  opacity: 0.55;
+  mix-blend-mode: multiply;
+  opacity: 0.75;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 30px rgba(240, 195, 106, 0.3));
   mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
   -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
