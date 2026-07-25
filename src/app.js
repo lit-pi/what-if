@@ -843,6 +843,36 @@ function verifyCharacterRedLines(stats, flags) {
   return violations;
 }
 
+// 6.5 结局场景许可表与转场限制 Helper
+const SCENE_ALLOWED_ENDINGS = {
+  gate: ['gate_exposure_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act2_ruins: ['ruins_arrest_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act2_dungeon: ['dungeon_rupture_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act3_library: ['library_seal_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act3_treasury: ['treasury_confess_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act4_corridor: ['corridor_betrayal_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act5_throne: [
+    'instantExecution',
+    'instantArrest',
+    'exposed',
+    'castleLost',
+    'dualRuler',
+    'redeemed',
+    'perfectSpy',
+    'victorBlamed',
+    'actorKing',
+    'absurdAscension',
+    'stalemate',
+  ],
+};
+
+function getAllowedNextSceneIds(currentSceneKey) {
+  const scene = SCENE_TREE[currentSceneKey];
+  if (!scene) return [null];
+  const choiceTargets = (scene.choices || []).map(choice => choice.nextSceneId).filter(Boolean);
+  return [...new Set([...choiceTargets, null])];
+}
+
 function validateEndingCandidate(suggestedEndingKey, runtimeContext = {}) {
   if (!suggestedEndingKey) {
     return { valid: true, endingKey: null, blockedByRedLines: [] };
@@ -861,10 +891,21 @@ function validateEndingCandidate(suggestedEndingKey, runtimeContext = {}) {
   const stats = runtimeContext.stats || appState.stats;
   const flags = runtimeContext.flags || appState.flags;
 
-  // 检查好结局清单（需要过角色红线验证）
-  const GOOD_ENDINGS = ['dualRuler', 'redeemed', 'perfectSpy', 'actorKing', 'absurdAscension'];
+  // 检查好结局/重要转折结局清单（需要过角色红线验证）
+  const GOOD_ENDINGS = ['dualRuler', 'redeemed', 'perfectSpy', 'actorKing', 'absurdAscension', 'victorBlamed'];
   if (GOOD_ENDINGS.includes(suggestedEndingKey)) {
     const violations = verifyCharacterRedLines(stats, flags);
+
+    // 针对 victorBlamed (王座甩锅结局) 的专属红线检测：盗贼黑料把柄未解或莱昂信任破裂时阻断
+    if (suggestedEndingKey === 'victorBlamed') {
+      if (stats.thiefLeverage >= 70 && !flags.bribedLocke) {
+        violations.push({ char: 'locke', key: 'victor_blamed_blocked_by_locke', text: '洛克掌握的黑料把柄未解决，无法轻易甩锅给维克托。' });
+      }
+      if (stats.heroTrust < 40) {
+        violations.push({ char: 'leon', key: 'victor_blamed_blocked_by_leon', text: '莱昂对你的信任已降至底线，拒绝相信维克托是唯一黑手。' });
+      }
+    }
+
     if (violations.length > 0) {
       // 被红线阻断！回退到 Runtime v1 已有硬失败/兜底结局
       let fallbackEndingKey = 'stalemate';
@@ -899,16 +940,22 @@ function validateAdjudication(candidate, runtimeContext = {}) {
     return { valid: false, errors: ['Candidate is not an object'], sanitized: null };
   }
 
+  const currentSceneKey = runtimeContext.currentSceneKey || (typeof appState !== 'undefined' ? appState.currentSceneKey : 'gate');
+
   // 1. schemaVersion 校验
   if (candidate.schemaVersion !== 'what-if-llm-adjudication/v1') {
     errors.push(`Invalid schemaVersion: expected what-if-llm-adjudication/v1, got ${candidate.schemaVersion}`);
   }
 
-  // 2. actionCategory 校验
+  // 2. actionCategory 校验与场景禁忌检查
   const VALID_CATEGORIES = ['deceive', 'protect', 'sacrifice', 'bribe', 'confess', 'peace', 'commandVictor', 'absurd', 'generic'];
-  const category = candidate.actionCategory;
+  let category = candidate.actionCategory;
   if (!VALID_CATEGORIES.includes(category)) {
     errors.push(`Invalid actionCategory: ${category}`);
+    category = 'generic';
+  } else if (currentSceneKey === 'gate' && category === 'confess' && !candidate.suggestedEndingKey) {
+    errors.push(`Action category 'confess' without ending is forbidden in scene '${currentSceneKey}'`);
+    category = 'generic';
   }
 
   // 3. adjudication 校验 (Runtime v1 只接受 success, costly_success, disaster_failure)
@@ -922,13 +969,12 @@ function validateAdjudication(candidate, runtimeContext = {}) {
     errors.push(`Invalid adjudication: ${adjudication}`);
   }
 
-  // 4. stateDelta 校验与裁剪
+  // 4. stateDelta 校验与裁剪 (严格限制在 [-30, 30] 之间)
   const sanitizedDelta = {};
   const rawDelta = candidate.stateDelta || {};
   for (const statKey in INITIAL_STATS) {
     if (typeof rawDelta[statKey] === 'number' && !isNaN(rawDelta[statKey])) {
-      // 限制单回合数值变动在 [-50, 50] 之间
-      sanitizedDelta[statKey] = Math.min(50, Math.max(-50, Math.round(rawDelta[statKey])));
+      sanitizedDelta[statKey] = Math.min(30, Math.max(-30, Math.round(rawDelta[statKey])));
     }
   }
 
@@ -970,23 +1016,29 @@ function validateAdjudication(candidate, runtimeContext = {}) {
     }
   }
 
-  // 7. suggestedNextSceneId 校验
+  // 7. suggestedNextSceneId 转场合法性校验
   let nextSceneId = null;
   if (candidate.suggestedNextSceneId) {
-    if (SCENE_TREE[candidate.suggestedNextSceneId]) {
+    const allowedNextScenes = getAllowedNextSceneIds(currentSceneKey);
+    if (allowedNextScenes.includes(candidate.suggestedNextSceneId)) {
       nextSceneId = candidate.suggestedNextSceneId;
     } else {
-      errors.push(`Invalid suggestedNextSceneId: ${candidate.suggestedNextSceneId}`);
+      errors.push(`Invalid scene transition: cannot transition from '${currentSceneKey}' to '${candidate.suggestedNextSceneId}'`);
     }
   }
 
-  // 8. suggestedEndingKey 校验与结局红线校验
+  // 8. suggestedEndingKey 场景阶段约束与结局红线校验
   let endingKey = null;
   if (candidate.suggestedEndingKey) {
-    const endingValidation = validateEndingCandidate(candidate.suggestedEndingKey, runtimeContext);
-    endingKey = endingValidation.endingKey;
-    if (!endingValidation.valid && endingValidation.reason?.includes('Unknown')) {
-      errors.push(endingValidation.reason);
+    const allowedEndingsForScene = SCENE_ALLOWED_ENDINGS[currentSceneKey] || [];
+    if (!allowedEndingsForScene.includes(candidate.suggestedEndingKey)) {
+      errors.push(`Ending key '${candidate.suggestedEndingKey}' is not allowed in scene '${currentSceneKey}'`);
+    } else {
+      const endingValidation = validateEndingCandidate(candidate.suggestedEndingKey, runtimeContext);
+      endingKey = endingValidation.endingKey;
+      if (!endingValidation.valid && endingValidation.reason?.includes('Unknown')) {
+        errors.push(endingValidation.reason);
+      }
     }
   }
 

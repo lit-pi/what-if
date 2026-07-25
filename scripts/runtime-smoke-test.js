@@ -256,7 +256,7 @@ if (!engine) {
     fail(`Failure adjudication should be downgraded to costly_success, got: ${vResult3.sanitized?.adjudication}`);
   }
 
-  // Test 4: Invalid stat keys, flag keys, scene keys & delta clamping
+  // Test 4: Invalid stat keys, flag keys, scene keys & delta clamping (-30..+30)
   const hallucinatedCandidate = {
     ...validCandidate,
     suggestedNextSceneId: 'non_existent_scene',
@@ -264,21 +264,63 @@ if (!engine) {
     stateDelta: { exposureRisk: 250, unknownStat: 100 },
     flagUpdates: { set: { unknownFlag: true, bribedLocke: true } },
   };
-  const vResult4 = engine.validateAdjudication(hallucinatedCandidate);
+  const vResult4 = engine.validateAdjudication(hallucinatedCandidate, { currentSceneKey: 'gate' });
   if (vResult4.valid) {
     fail('Hallucinated scene & ending keys should fail validation errors');
   }
   if ('unknownStat' in vResult4.sanitized.stateDelta) {
     fail('Hallucinated statKey should be stripped from stateDelta');
   }
-  if (vResult4.sanitized.stateDelta.exposureRisk !== 50) {
-    fail(`Out of bound delta should be clamped to 50, got ${vResult4.sanitized.stateDelta.exposureRisk}`);
+  if (vResult4.sanitized.stateDelta.exposureRisk !== 30) {
+    fail(`Out of bound delta should be clamped to 30, got ${vResult4.sanitized.stateDelta.exposureRisk}`);
   }
   if ('unknownFlag' in vResult4.sanitized.flagUpdates.set) {
     fail('Hallucinated flagKey should be stripped from flagUpdates.set');
   }
 
-  // Test 5: Character Red Lines & validateEndingCandidate blocking
+  // Test 4.1: Invalid scene transitions
+  const invalidTransitionCandidate = {
+    ...validCandidate,
+    suggestedNextSceneId: 'act5_throne', // Illegal jump from gate to act5_throne
+  };
+  const vResultTransition = engine.validateAdjudication(invalidTransitionCandidate, { currentSceneKey: 'gate' });
+  if (vResultTransition.valid || vResultTransition.sanitized.nextSceneId !== null) {
+    fail('Illegal scene transition from gate to act5_throne should be rejected and reset nextSceneId to null');
+  }
+
+  // Test 4.2: Valid scene transitions
+  const validTransitionCandidate = {
+    ...validCandidate,
+    suggestedNextSceneId: 'act2_ruins',
+  };
+  const vResultTransitionValid = engine.validateAdjudication(validTransitionCandidate, { currentSceneKey: 'gate' });
+  if (!vResultTransitionValid.valid || vResultTransitionValid.sanitized.nextSceneId !== 'act2_ruins') {
+    fail('Valid scene transition from gate to act2_ruins should be accepted');
+  }
+
+  // Test 4.3: Non-final act early ending trigger rejection
+  const earlyEndingCandidate = {
+    ...validCandidate,
+    suggestedNextSceneId: null,
+    suggestedEndingKey: 'stalemate', // Illegal ending in gate
+  };
+  const vResultEarlyEnding = engine.validateAdjudication(earlyEndingCandidate, { currentSceneKey: 'gate' });
+  if (vResultEarlyEnding.valid || vResultEarlyEnding.sanitized.endingKey !== null) {
+    fail('Premature ending trigger (stalemate in gate) should be rejected and reset endingKey to null');
+  }
+
+  // Test 4.4: Scene specific instant ending allowed
+  const validGateEndingCandidate = {
+    ...validCandidate,
+    suggestedNextSceneId: null,
+    suggestedEndingKey: 'gate_exposure_ending',
+  };
+  const vResultGateEnding = engine.validateAdjudication(validGateEndingCandidate, { currentSceneKey: 'gate' });
+  if (!vResultGateEnding.valid || vResultGateEnding.sanitized.endingKey !== 'gate_exposure_ending') {
+    fail('Scene-specific instant ending (gate_exposure_ending in gate) should be accepted');
+  }
+
+  // Test 5: Character Red Lines & validateEndingCandidate blocking (including victorBlamed)
   const badStats = {
     exposureRisk: 20,
     heroTrust: 30, // Leon trust < 40 -> Red Line
@@ -302,6 +344,17 @@ if (!engine) {
   }
   if (!endingCheck.endingKey || !['stalemate', 'exposed', 'instantArrest'].includes(endingCheck.endingKey)) {
     fail(`Blocked ending should fallback to a valid Runtime v1 key, got ${endingCheck.endingKey}`);
+  }
+
+  // Test 5.1: victorBlamed red line blocking when thiefLeverage >= 70
+  const victorBlamedBadStats = {
+    ...badStats,
+    heroTrust: 60, // heroTrust is high enough
+    thiefLeverage: 80, // High leverage & unbribed -> triggers victorBlamed red line
+  };
+  const victorBlamedCheck = engine.validateEndingCandidate('victorBlamed', { stats: victorBlamedBadStats, flags: {} });
+  if (victorBlamedCheck.valid || victorBlamedCheck.endingKey === 'victorBlamed') {
+    fail('victorBlamed ending should be blocked when thiefLeverage >= 70 and unbribed');
   }
 
   // Test 6: Isomorphic Adapter adjudicateFreeAction
