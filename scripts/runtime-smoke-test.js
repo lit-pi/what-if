@@ -2,6 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+
+if (fs.existsSync(path.join(root, '.env'))) {
+  const envContent = fs.readFileSync(path.join(root, '.env'), 'utf8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+      const [key, ...vals] = trimmed.split('=');
+      const val = vals.join('=').trim().replace(/^["']|["']$/g, '');
+      if (key && !process.env[key.trim()]) {
+        process.env[key.trim()] = val;
+      }
+    }
+  }
+}
+
 const appPath = path.join(root, 'src/app.js');
 const source = fs.readFileSync(appPath, 'utf8');
 

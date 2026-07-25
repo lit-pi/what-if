@@ -1161,6 +1161,96 @@ function adjudicateFreeAction(inputText, currentSceneKey = appState.currentScene
 }
 
 // 9. LLM Prompt Context 打包器与 Client 封装
+const LLM_CONFIG = {
+  baseURL: (typeof process !== 'undefined' && process.env && process.env.LLM_BASE_URL) || 'https://ark.cn-beijing.volces.com/api/v3',
+  apiKey: (typeof process !== 'undefined' && process.env && process.env.LLM_API_KEY) || (typeof window !== 'undefined' && window.__LLM_API_KEY__) || '',
+  model: (typeof process !== 'undefined' && process.env && process.env.LLM_MODELS) || 'doubao-seed-2-0-mini-260428',
+};
+
+async function fetchLLMAdjudication(promptPayload) {
+  const url = `${LLM_CONFIG.baseURL.replace(/\/+$/, '')}/chat/completions`;
+  const systemPrompt = `你是一个暗黑奇幻悬疑 RPG 游戏《假如我是勇者队伍里的卧底魔王》的在线 GM 裁决引擎。
+玩家饰演卧底在勇者队伍里的魔王阿斯兰，当前正面对同伴的怀疑与魔王城突发破绽事件。
+请根据输入的场景上下文、队伍隐性指标、当前破绽和玩家输入的自由表述，给出有戏剧性、有因果说服力的 GM 裁决。
+
+你必须严格输出且仅输出一个合法的 JSON 对象（不得包含 markdown \`\`\` 语法包覆），JSON 格式与字段规定如下：
+{
+  "schemaVersion": "what-if-llm-adjudication/v1",
+  "actionCategory": "deceive",
+  "secondaryCategory": null,
+  "adjudication": "costly_success",
+  "confidence": 0.9,
+  "narration": "GM 旁白描述（1-2句，精彩烘托局势后果）...",
+  "stateDelta": {
+    "exposureRisk": -3,
+    "heroTrust": 5,
+    "mageEvidence": 8,
+    "priestRedemption": 0,
+    "thiefLeverage": 0,
+    "castleIntegrity": 0,
+    "victorMisread": 0,
+    "partyProgress": 15,
+    "butterflyDeviation": 0
+  },
+  "flagUpdates": {
+    "set": {},
+    "increment": {}
+  },
+  "triggeredRules": ["rule.scene.adjudicated"],
+  "focusedCharacters": ["ivette", "leon"],
+  "characterResponses": [
+    {
+      "characterId": "ivette",
+      "emotion": "推了推眼镜",
+      "stance": "suspicious",
+      "content": "同伴对话回应..."
+    }
+  ],
+  "evidenceLog": [],
+  "suggestedNextSceneId": null,
+  "suggestedEndingKey": null,
+  "safetyNotes": []
+}
+
+硬规则要求：
+1. actionCategory 只能选：deceive, protect, sacrifice, bribe, confess, peace, commandVictor, absurd, generic 之一。
+2. adjudication 只能选：success, costly_success, disaster_failure 之一。
+3. stateDelta 只能使用 exposureRisk, heroTrust, mageEvidence, priestRedemption, thiefLeverage, castleIntegrity, victorMisread, partyProgress, butterflyDeviation 这 9 个字段。单次变动在 -30 到 +30 之间。
+4. characterId 只能选：narrator, aslan, leon, ivette, mira, locke, victor 之一。
+5. suggestedNextSceneId 与 suggestedEndingKey 若无转场或结局触发请设为 null。`;
+
+  const userPrompt = JSON.stringify(promptPayload, null, 2);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LLM_CONFIG.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: (LLM_CONFIG.model || '').split(',')[0].trim() || 'doubao-seed-2-0-mini-260428',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`LLM API returned status ${response.status}`);
+  }
+
+  const data = await response.json();
+  let content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('LLM response missing content');
+  }
+
+  content = content.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(content);
+}
+
 function buildLLMPromptContext(inputText, currentSceneKey = appState.currentSceneKey) {
   const scene = SCENE_TREE[currentSceneKey] || SCENE_TREE.gate;
   const ALLOWED_CATEGORIES = {
@@ -1203,8 +1293,8 @@ function buildLLMPromptContext(inputText, currentSceneKey = appState.currentScen
 }
 
 async function requestLLMAdjudication(inputText, options = {}) {
-  const timeoutMs = options.timeoutMs || 4000;
-  const customFetcher = options.customFetcher || null;
+  const timeoutMs = options.timeoutMs || 20000;
+  const customFetcher = options.customFetcher || (LLM_CONFIG.apiKey ? fetchLLMAdjudication : null);
 
   try {
     const promptPayload = buildLLMPromptContext(inputText, options.currentSceneKey || appState.currentSceneKey);
@@ -1235,6 +1325,8 @@ async function requestLLMAdjudication(inputText, options = {}) {
           flagUpdates: s.flagUpdates,
           dialogues: s.dialogues,
         };
+      } else {
+        console.warn('[LLM Adapter] LLM output failed validation rules:', validation.errors);
       }
     }
   } catch (err) {
