@@ -1160,6 +1160,91 @@ function adjudicateFreeAction(inputText, currentSceneKey = appState.currentScene
   };
 }
 
+// 9. LLM Prompt Context 打包器与 Client 封装
+function buildLLMPromptContext(inputText, currentSceneKey = appState.currentSceneKey) {
+  const scene = SCENE_TREE[currentSceneKey] || SCENE_TREE.gate;
+  const ALLOWED_CATEGORIES = {
+    gate: ['deceive', 'sacrifice', 'commandVictor', 'absurd', 'generic'],
+    act2_ruins: ['protect', 'deceive', 'commandVictor', 'sacrifice', 'generic'],
+    act2_dungeon: ['protect', 'bribe', 'deceive', 'sacrifice', 'generic'],
+    act3_library: ['deceive', 'protect', 'generic'],
+    act3_treasury: ['bribe', 'protect', 'deceive', 'absurd', 'generic'],
+    act4_corridor: ['commandVictor', 'protect', 'deceive', 'peace', 'generic'],
+    act5_throne: ['peace', 'confess', 'deceive', 'bribe', 'absurd', 'generic'],
+  };
+
+  return {
+    scenarioId: 'undercover-demon-king',
+    runtimeVersion: 'v1',
+    scene: {
+      id: scene.id,
+      act: scene.act,
+      title: scene.title,
+      mishap: scene.sceneMishap || '',
+      allowedCategories: ALLOWED_CATEGORIES[scene.id] || ['generic'],
+      forbiddenCategories: scene.id === 'gate' ? ['confess'] : [],
+    },
+    playerAction: {
+      type: 'free_text',
+      text: (inputText || '').trim(),
+    },
+    stats: { ...appState.stats },
+    flags: { ...appState.flags },
+    focusedCharacters: ['leon', 'ivette', 'mira', 'locke', 'victor'],
+    redLineSummary: {
+      leonTrustThreshold: 40,
+      mageEvidenceThreshold: 90,
+      priestRedemptionThreshold: 75,
+      thiefLeverageThreshold: 70,
+      victorMisreadThreshold: 80,
+    },
+    endingPolicy: 'runtime_decides',
+  };
+}
+
+async function requestLLMAdjudication(inputText, options = {}) {
+  const timeoutMs = options.timeoutMs || 4000;
+  const customFetcher = options.customFetcher || null;
+
+  try {
+    const promptPayload = buildLLMPromptContext(inputText, options.currentSceneKey || appState.currentSceneKey);
+
+    if (customFetcher && typeof customFetcher === 'function') {
+      const fetchPromise = customFetcher(promptPayload);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('LLM adjudication request timeout')), timeoutMs)
+      );
+
+      const rawCandidate = await Promise.race([fetchPromise, timeoutPromise]);
+      const validation = validateAdjudication(rawCandidate, {
+        currentSceneKey: promptPayload.scene.id,
+        stats: appState.stats,
+        flags: appState.flags,
+      });
+
+      if (validation.valid) {
+        const s = validation.sanitized;
+        return {
+          actionLabel: `自由表述: "${inputText}"`,
+          actionCategory: s.actionCategory,
+          adjudication: s.adjudication,
+          nextSceneId: s.nextSceneId,
+          endingKey: s.endingKey,
+          narration: s.narration,
+          delta: s.stateDelta,
+          flagUpdates: s.flagUpdates,
+          dialogues: s.dialogues,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[LLM Adapter] Fallback to local adjudicator due to:', err.message);
+  }
+
+  // 降级回退至本地同构 adapter
+  return adjudicateFreeAction(inputText, options.currentSceneKey || appState.currentSceneKey);
+}
+
 function triggerSceneTransition(nextSceneKey, callback) {
   appState.transitionTargetKey = nextSceneKey;
   appState.isSceneTransitioning = true;
@@ -1773,13 +1858,22 @@ function renderPlayView(root) {
 
   const freeForm = document.getElementById('free-action-form');
   if (freeForm) {
-    freeForm.addEventListener('submit', (e) => {
+    freeForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       e.stopPropagation();
       const inputEl = document.getElementById('free-action-input');
+      const sendBtn = freeForm.querySelector('.send-btn');
       const val = inputEl ? inputEl.value.trim() : '';
       if (!val) return;
-      applyTurn(adjudicateFreeAction(val));
+
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerText = '🔮 裁决中...';
+      }
+      if (inputEl) inputEl.disabled = true;
+
+      const result = await requestLLMAdjudication(val);
+      applyTurn(result);
     });
   }
 
@@ -1842,6 +1936,8 @@ function renderResultView(root) {
 if (typeof globalThis !== 'undefined') {
   globalThis.__WHAT_IF_ENGINE__ = {
     adjudicateFreeAction,
+    buildLLMPromptContext,
+    requestLLMAdjudication,
     validateAdjudication,
     validateEndingCandidate,
     verifyCharacterRedLines,

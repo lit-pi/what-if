@@ -297,6 +297,46 @@ if (!engine) {
   if (adapterResult.adjudication !== 'costly_success') {
     fail(`absurd intent should output costly_success, got ${adapterResult.adjudication}`);
   }
+
+  // Test 7: buildLLMPromptContext structure
+  const promptContext = engine.buildLLMPromptContext('我解释这是古魔法阵', 'gate');
+  if (promptContext.scenarioId !== 'undercover-demon-king' || promptContext.runtimeVersion !== 'v1') {
+    fail('buildLLMPromptContext returned invalid scenarioId or runtimeVersion');
+  }
+  if (promptContext.scene.id !== 'gate' || !Array.isArray(promptContext.scene.allowedCategories)) {
+    fail('buildLLMPromptContext scene payload is invalid');
+  }
+
+  // Test 8: requestLLMAdjudication with custom fetcher (successful LLM response)
+  const mockLLMResponse = {
+    schemaVersion: 'what-if-llm-adjudication/v1',
+    actionCategory: 'peace',
+    adjudication: 'success',
+    narration: '你提出了两界和平路线。',
+    stateDelta: { priestRedemption: 15 },
+    flagUpdates: { set: { proposedPeace: true } },
+    focusedCharacters: ['mira'],
+    characterResponses: [{ characterId: 'mira', emotion: '欣慰', content: '太好了！' }],
+    suggestedNextSceneId: 'act4_corridor',
+    suggestedEndingKey: null,
+  };
+  const asyncResult = await engine.requestLLMAdjudication('提出和平', {
+    currentSceneKey: 'gate',
+    customFetcher: async () => mockLLMResponse,
+  });
+  if (asyncResult.actionCategory !== 'peace' || asyncResult.adjudication !== 'success') {
+    fail(`requestLLMAdjudication customFetcher should return peace adjudication, got ${asyncResult.actionCategory}`);
+  }
+
+  // Test 9: requestLLMAdjudication fallback on timeout or error
+  const fallbackResult = await engine.requestLLMAdjudication('我是魔王', {
+    currentSceneKey: 'gate',
+    timeoutMs: 50,
+    customFetcher: async () => new Promise((resolve) => setTimeout(resolve, 200)), // Will timeout
+  });
+  if (fallbackResult.actionCategory !== 'confess' || fallbackResult.endingKey !== 'exposed') {
+    fail(`requestLLMAdjudication should fallback to local adjudicateFreeAction on timeout, got ${fallbackResult.actionCategory}`);
+  }
 }
 
 if (errors.length) {
