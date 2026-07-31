@@ -224,7 +224,128 @@
 
 转场：进入结局判定。
 
-## 10. 结局可达性调参重点
+## 10. 商业化场景配置细化
+
+正式 Node Runtime 中，每个场景需要从叙事段落升级为结构化配置。建议结构：
+
+```json
+{
+  "id": "gate",
+  "act": 1,
+  "title": "第一幕：城门前的安静",
+  "mishap": "阵灵识别阿斯兰并高喊魔王陛下。",
+  "focusCharacters": ["ivette", "leon", "victor"],
+  "allowedCategories": ["deceive", "sacrifice", "commandVictor", "absurd", "generic"],
+  "forbiddenCategories": ["confess"],
+  "legalNextSceneIds": ["act2_ruins", "act2_dungeon"],
+  "allowedEndingKeys": ["gate_exposure_ending", "instantExecution", "instantArrest", "exposed"],
+  "conditionRules": []
+}
+```
+
+### 10.1 通用条件规则格式
+
+```json
+{
+  "id": "gate.confess.instant_exposure",
+  "when": {
+    "category": "confess",
+    "statGte": {},
+    "statLte": {},
+    "flagsAll": [],
+    "flagsAny": []
+  },
+  "effect": {
+    "adjudication": "disaster_failure",
+    "endingKey": "gate_exposure_ending",
+    "stateDelta": {
+      "exposureRisk": 30,
+      "heroTrust": -30
+    },
+    "focusedCharacters": ["leon", "ivette"],
+    "trace": "当众承认魔王身份，非最终幕立即掉马"
+  }
+}
+```
+
+规则命中顺序：
+
+1. `hardFailureRules`
+2. `redLineRules`
+3. `categoryRules`
+4. `pressureRules`
+5. `defaultProgressRule`
+
+同一层多个规则命中时，按配置顺序执行，最多合成 3 条主要规则，避免单回合状态爆炸。
+
+### 10.2 `gate` 条件组合
+
+| 条件 | 裁决 | 结果 |
+| :--- | :--- | :--- |
+| `category=confess` | `disaster_failure` | `gate_exposure_ending` |
+| `category=commandVictor` 且 `victorMisread >= 60` | `costly_success` | `victorMisread -15`、`exposureRisk +8`、`castleIntegrity +5` |
+| `category=deceive` 且 `mageEvidence >= 50` | `costly_success` | `mageEvidence +8`、`contradictionCount +1` |
+| `category=sacrifice` 攻击阵灵 | `costly_success` | `castleIntegrity -12`、`heroTrust +5`、`exposureRisk +3` |
+| `category=absurd` | `costly_success` | `butterflyDeviation +10`，默认转 `act2_ruins` |
+
+### 10.3 `act2_ruins` 条件组合
+
+| 条件 | 裁决 | 结果 |
+| :--- | :--- | :--- |
+| `category=protect` 且对象是魔族小兵 | `success` | `savedDemonSoldier=true`、`priestRedemption +15`、`exposureRisk +4` |
+| `category=sacrifice` 且米拉在场 | `disaster_failure` 或强代价 | `ruins_arrest_ending` 或 `sacrificedInnocentsCount +1` |
+| `category=deceive` 且 `contradictionCount >= 1` | `costly_success` | `mageEvidence +10`、`heroTrust -4` |
+| `victorMisread >= 70` 且未 `commandVictorSuccess` | 插入压力 | 追加维克托误读对白，`exposureRisk +6` |
+
+### 10.4 `act2_dungeon` 条件组合
+
+| 条件 | 裁决 | 结果 |
+| :--- | :--- | :--- |
+| `category=bribe` 且 `thiefLeverage >= 40` | `success` | `bribedLocke=true`、`thiefLeverage -15` |
+| `category=protect` 且救出被囚军官 | `success` | `freedDungeonCaptive=true`、`priestRedemption +15`、`mageEvidence -6` |
+| `category=sacrifice` | `disaster_failure` | `dungeon_rupture_ending` |
+| `category=deceive` 且档案矛盾未解 | `costly_success` | `mageEvidence +8`、`contradictionCount +1` |
+
+### 10.5 `act3_library` 条件组合
+
+| 条件 | 裁决 | 结果 |
+| :--- | :--- | :--- |
+| `category=deceive` 且 `contradictionCount < 2` | `success` 或 `costly_success` | `mageEvidence -8` 或 `mageEvidence +6` |
+| `category=deceive` 且 `contradictionCount >= 2` | `disaster_failure` | `library_seal_ending` 或 `instantArrest` |
+| `category=protect` 主动接受测试 | `costly_success` | `priestRedemption +5`、`exposureRisk +8`、`mageEvidence -5` |
+| `mageEvidence >= 60` | 压力插入 | 伊薇特必须发言并追加测试 |
+
+### 10.6 `act3_treasury` 条件组合
+
+| 条件 | 裁决 | 结果 |
+| :--- | :--- | :--- |
+| `category=bribe` | `success` | `bribedLocke=true`、`thiefLeverage -15` |
+| `category=protect` 引导去神兵库 | `success` | `castleIntegrity +20`、`heroTrust +10` |
+| `category=deceive` 且 `thiefLeverage >= 50` | `costly_success` | `thiefLeverage +8`，洛克追加勒索 |
+| 承认宝库属于自己 | `disaster_failure` | `treasury_confess_ending` |
+
+### 10.7 `act4_corridor` 条件组合
+
+| 条件 | 裁决 | 结果 |
+| :--- | :--- | :--- |
+| `category=commandVictor` | `success` | `commandVictorSuccess=true`、`victorMisread -20`、`castleIntegrity +15` |
+| `category=protect` | `success` | `heroTrust +12`、`priestRedemption +10` |
+| `category=peace` | `costly_success` | `proposedPeace=true`、`priestRedemption +10`、`exposureRisk +8` |
+| 强杀维克托 | `disaster_failure` | `corridor_betrayal_ending` |
+| `victorMisread >= 80` 且未成功指挥 | `disaster_failure` 或压力插入 | 维克托公开喊破身份风险 |
+
+### 10.8 `act5_throne` 条件组合
+
+| 条件 | 裁决 | 结果 |
+| :--- | :--- | :--- |
+| `category=peace` 且 `priestRedemption >= 75` 且 `heroTrust >= 55` | `success` | 进入 `dualRuler` 候选 |
+| `category=confess` 且 `priestRedemption >= 80` 且 `heroTrust >= 70` 且无牺牲无辜 | `success` | 进入 `redeemed` 候选 |
+| `category=deceive` 且 `exposureRisk < 45` 且 `mageEvidence < 50` | `success` | 进入 `perfectSpy` 候选 |
+| `category=bribe` 或甩锅且 `betrayedVictor=true` 且 `thiefLeverage < 70` | `costly_success` | 进入 `victorBlamed` 候选 |
+| `category=absurd` 且 `butterflyDeviation >= 60` | `success` | 进入 `absurdAscension` 候选 |
+| 任意好结局候选命中角色红线 | 阻断 | 回退 `stalemate`、`exposed` 或 `instantArrest` |
+
+## 11. 结局可达性调参重点
 
 下一轮试玩应重点确认：
 
@@ -235,7 +356,7 @@
 - `instantArrest` 是否太容易打断自由行动。
 - 最终幕 `confess` 是否要从当前硬失败改成“承担责任式摊牌”，这个改动必须和红线 validator 一起做。
 
-## 11. 验收标准
+## 12. 验收标准
 
 - 每个场景至少有 3 类自由行动能被合理裁决。
 - 每个场景至少有 1 个明确红线。

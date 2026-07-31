@@ -181,7 +181,136 @@ LLM 可以建议：
 - 维克托误读是否会插入灾难性支线。
 - `failure` 何时从 v1.1 目标进入真实 LLM schema。
 
-## 14. 验收标准
+## 14. 商业化 Node Runtime 规则细化
+
+正式 Node Runtime 中，GM 裁决应拆成可配置、可测试的 6 层规则。每一层都要把命中情况写入 `decisionTrace`，方便 QA、运营后台和结算页解释。
+
+### 14.1 回合输入归一化
+
+每个回合先归一化成统一输入：
+
+```json
+{
+  "sessionId": "ses_...",
+  "turnIndex": 3,
+  "scenarioId": "undercover-demon-king",
+  "scenarioVersion": "1.0.0",
+  "sceneId": "act3_library",
+  "action": {
+    "type": "free_text",
+    "presetActionId": null,
+    "text": "我用古语解释这个剑痕是封印反噬"
+  },
+  "statsBefore": {},
+  "flagsBefore": {},
+  "recentTurns": []
+}
+```
+
+归一化规则：
+
+- 空文本不进入 LLM，返回 `input_empty`。
+- 自由文本长度默认限制为 200 个中文字符；超出部分截断并记录 `input_truncated`。
+- 预设行动必须存在于当前场景，否则拒绝并返回 `invalid_preset_action`。
+- 同一 `clientTurnId` 重复提交时返回第一次结算结果，不重复应用状态。
+
+### 14.2 行动分类评分
+
+自由行动先由 LLM 或本地分类器给出候选 `actionCategory`，Runtime 再按当前场景校验。
+
+分类评分使用三项：
+
+| 评分项 | 范围 | 含义 |
+| :--- | ---: | :--- |
+| `sceneFit` | 0-3 | 是否处理当前破绽 |
+| `characterFit` | 0-3 | 是否符合至少一个焦点角色价值观 |
+| `riskTouch` | 0-3 | 是否触碰暴露、证据、红线或硬失败 |
+
+默认裁决：
+
+| 条件 | 裁决 |
+| :--- | :--- |
+| `sceneFit >= 2` 且 `characterFit >= 2` 且 `riskTouch <= 1` | `success` |
+| `sceneFit >= 1` 且没有命中红线 | `costly_success` |
+| 没有处理当前破绽，但未触碰硬失败 | `costly_success`，并追加风险 |
+| 命中场景即时死局或角色硬红线 | `disaster_failure` |
+
+Runtime v1 仍不开放普通 `failure` 给 LLM。等 UI 能清晰展示“失败但不推进”后，再作为 v1.1 引入。
+
+### 14.3 场景条件校验
+
+每个场景配置：
+
+```json
+{
+  "allowedCategories": ["deceive", "protect", "generic"],
+  "forbiddenCategories": ["confess"],
+  "legalNextSceneIds": ["act4_corridor"],
+  "allowedEndingKeys": ["library_seal_ending", "instantArrest", "exposed"],
+  "hardFailureRules": []
+}
+```
+
+校验顺序：
+
+1. `actionCategory` 不在 `allowedCategories` 中：降级为 `generic` 或 fallback。
+2. 命中 `forbiddenCategories`：按场景配置转 `disaster_failure` 或 fallback。
+3. `suggestedNextSceneId` 不在 `legalNextSceneIds`：丢弃，并记录 `invalid_scene_transition`。
+4. `suggestedEndingKey` 不在 `allowedEndingKeys`：丢弃，并记录 `ending_not_allowed_in_scene`。
+5. 非最终幕不能触发终局结局，只能触发场景专属即时结局或 Runtime 硬失败兜底。
+
+### 14.4 角色压力合成
+
+每回合最多选择 3 个焦点角色：
+
+1. 当前场景固定焦点角色。
+2. 命中阈值的压力角色。
+3. 被玩家行动直接影响的角色。
+
+优先级：
+
+| 优先级 | 条件 |
+| :--- | :--- |
+| P0 | 命中红线或即时对峙 |
+| P1 | 当前破绽的核心角色 |
+| P2 | 数值接近阈值的角色 |
+| P3 | 适合补充情绪反馈的角色 |
+
+LLM 可以写对白，但 Runtime 必须决定谁必须发言、谁不能缺席。
+
+### 14.5 状态变化合成
+
+最终 `stateDelta` 来自三部分：
+
+1. `baseDelta`：场景 + 行动分类默认变化。
+2. `pressureDelta`：角色压力或红线追加变化。
+3. `llmCandidateDelta`：LLM 候选变化，只能在允许范围内微调。
+
+合成规则：
+
+- 单项 LLM 候选 delta 裁剪到 `-30..+30`。
+- 最终状态裁剪到 `0..100`。
+- 同一回合最多重点展示 4 个状态变化。
+- 若 LLM 候选与场景默认方向冲突，以场景默认方向为准。例如当众承认身份不能降低 `exposureRisk`。
+
+### 14.6 决策追踪 `decisionTrace`
+
+服务端每回合应输出内部追踪：
+
+```json
+{
+  "matchedRules": ["scene.act3_library.deceive", "character.ivette.evidence_pressure"],
+  "rejectedCandidateFields": ["suggestedNextSceneId"],
+  "fallbackUsed": false,
+  "llmUsed": true,
+  "endingCandidateSource": "runtime_threshold",
+  "stateClampEvents": ["mageEvidence:+44->+30"]
+}
+```
+
+普通玩家不一定看到完整 `decisionTrace`，但结算页和运营后台应使用它解释因果。
+
+## 15. 验收标准
 
 - 同一输入、同一状态、同一场景下，运行时最终结果确定。
 - LLM 挂掉时仍可用本地裁决玩完整局。

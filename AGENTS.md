@@ -9,17 +9,41 @@
 - What-If 负责玩家体验、剧本运行时、GM 裁决、AI 角色压力、UI 交互、结算页和剧本资产。
 - Silicon Factory 是未来的上游提供方，负责人格包、记忆种子、多 Agent 能力和质量门禁。
 
-## 当前原型形态
+## 当前产品阶段
 
-- 保持 MVP 轻量，优先快速验证。
-- 当前原型是零依赖静态 Web 代码。
+项目已经从静态 demo 验证切换到商业化产品开发阶段。
+
+当前阶段是：
+
+> 商业化 Phase 1：Node.js / TypeScript 前后端分离产品化。
+
+阶段目标：
+
+- 保留当前静态 demo 作为玩法和视觉参考。
+- 将 GM 裁决、状态、旗标、结局、角色红线和场景矩阵迁移到服务端权威 Runtime。
+- 建立 `apps/api`、`packages/runtime`、`packages/contracts`、`packages/scenarios` 等 Node.js workspace 结构。
+- 前端只负责展示和交互，不再持有权威状态。
+- 浏览器不再直连真实 LLM，模型调用只允许发生在服务端。
+
+第一轮仍然不要做：
+
+- 账号系统。
+- 支付订阅。
+- 运营后台。
+- 数据库持久化。
+- 真实 LLM 接入。
+- 剧本市场。
+
+## 当前 demo 形态
+
+- `src/` 仍是已验证的零依赖静态 Web demo。
 - 主入口：`index.html`。
 - 运行时外壳：`src/app.js`。
 - 样式：`src/styles.css`。
 - 本地预览：`pnpm dev`。
-- 语法检查：`pnpm check`。
+- 旧 demo 语法检查：`pnpm check`。
 
-除非有明确的产品理由且用户同意，不要引入 React、Vite、后端服务、账号系统、市场功能或重型构建工具。
+MVP 静态阶段“不引入 React、Vite、后端服务或构建工具”的限制只适用于继续维护 demo 或做玩法小实验。商业化 Phase 1 已允许引入 Node.js、TypeScript、Fastify、React/Vite、workspace 和测试工具，但必须遵守商业化实施文档的阶段边界。
 
 ## 必读上下文
 
@@ -29,6 +53,8 @@
 - `docs/context/silicon-factory-downstream-context.md`
 - `docs/product/mvp-requirements.md`
 - `docs/product/game-development-playbook.md`
+- `docs/product/commercial-frontend-backend-architecture.md`
+- `docs/product/node-commercial-implementation-plan.md`
 - `docs/specs/undercover-demon-king.md`
 
 如果涉及视觉或资产相关工作，还要阅读：
@@ -58,20 +84,20 @@
 - 结局优先级。
 - 结算页因果解释。
 
-## MVP 优先级
+## 当前优先级
 
 优先打磨第一个剧本：
 
 > 假如我是勇者队伍里的卧底魔王
 
-MVP 需要证明：
+商业化 Phase 1 需要证明：
 
-- 六幕流程可以从开局一直玩到结局。
-- 预设行动和自由行动都可以被裁决。
-- 每回合后都能看到状态变化。
-- AI 角色会根据角色压力和关系状态做出反应。
-- 结局选择是确定性的，并且可以解释。
-- 至少六个结局可以通过文档化阈值到达。
+- 当前 demo 的六幕/七节点玩法基线可以迁移到服务端 Runtime。
+- 预设行动和自由行动 fallback 都可以由服务端裁决。
+- 每回合状态变化、旗标、角色反应和结局候选都有确定性规则。
+- 角色红线、场景转场、结局优先级不能由 LLM 或前端绕过。
+- 至少六个结局可以通过文档化阈值和测试路径到达。
+- API 能在无数据库、无真实 LLM 的情况下跑完整局。
 
 ## 运行时规则
 
@@ -98,3 +124,10 @@ MVP 需要证明：
 修改 `src/app.js` 后运行 `pnpm check`。
 
 如果 UI 或玩法变更影响浏览器体验，使用 `pnpm dev` 预览并手动验证流程。
+
+商业化 Node 架构实施后，还应运行：
+
+- `pnpm check:node`
+- `pnpm test:node`
+
+在相关 workspace 脚本尚未建立前，不要假装这些检查已经可用；实施 agent 需要先创建脚本，再把它们纳入验收。
