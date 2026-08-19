@@ -16,6 +16,7 @@
     "@lit-pi/what-if-llm": "workspace:*",
     "@lit-pi/what-if-runtime": "workspace:*",
     "@lit-pi/what-if-scenarios": "workspace:*",
+    "dotenv": "^16.4.5",
     "fastify": "^4.27.0",
     "zod": "^3.23.8"
   },
