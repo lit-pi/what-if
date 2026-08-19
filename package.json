@@ -1,0 +1,21 @@
+{
+  "name": "@lit-pi/what-if",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 5177",
+    "check": "node --check src/app.js",
+    "test:runtime": "node scripts/runtime-smoke-test.js",
+    "dev:api": "pnpm --filter @lit-pi/what-if-api dev",
+    "dev:web": "pnpm --filter @lit-pi/what-if-web dev",
+    "build": "pnpm -r build",
+    "check:node": "pnpm -r typecheck",
+    "test:node": "pnpm -r test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

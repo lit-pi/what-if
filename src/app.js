@@ -1,0 +1,2099 @@
+// ---------------------------------------------------------------------------
+// 《假如我是勇者队伍里的卧底魔王》- 旁白化场景叙事 + 魔王慌张表情与大结局特写
+// ---------------------------------------------------------------------------
+
+// 1. 初始全局局势状态
+const INITIAL_STATS = {
+  exposureRisk: 25,
+  heroTrust: 72,
+  mageEvidence: 34,
+  priestRedemption: 58,
+  thiefLeverage: 10,
+  castleIntegrity: 85,
+  victorMisread: 32,
+  partyProgress: 10,
+  butterflyDeviation: 0,
+};
+
+const HINTS_UNLOCK_DELAY_MS = 5000;
+
+const STAT_METADATA = {
+  exposureRisk: { label: '暴露风险', tone: 'danger', icon: '⚠️' },
+  heroTrust: { label: '勇者信任', tone: 'good', icon: '⚔️' },
+  mageEvidence: { label: '法师证据', tone: 'warning', icon: '📜' },
+  priestRedemption: { label: '牧师救赎', tone: 'good', icon: '✨' },
+  thiefLeverage: { label: '盗贼把柄', tone: 'warning', icon: '🗡️' },
+  castleIntegrity: { label: '魔王城防', tone: 'good', icon: '🏰' },
+  victorMisread: { label: '维克托误解', tone: 'danger', icon: '🚩' },
+  partyProgress: { label: '推进进度', tone: 'good', icon: '🚩' },
+  butterflyDeviation: { label: '蝴蝶偏离', tone: 'mystic', icon: '🦋' },
+};
+
+// 2. 角色库 (含旁白与魔王姿态)
+const CHARACTERS = {
+  narrator: { id: 'narrator', name: '旁白', role: '场景叙事', avatar: '📖', image: null, color: '#f0c36a', tagIcon: '📜', desc: '局势与场景旁白推演' },
+  aslan: {
+    id: 'aslan',
+    name: '阿斯兰 (我)',
+    role: '卧底魔王',
+    avatar: '魔',
+    image: './assets/char_aslan.png',
+    panickedImage: './assets/char_aslan_panicked.png',
+    knightImage: './assets/char_aslan.png',
+    color: '#c77dff',
+    tagIcon: '👑',
+    desc: '第七代魔王 · 伪装成流浪圣骑士',
+    dimensionModel: {
+      identity: { name: '阿斯兰 (夜冠之主)', age: 320, gender: 'male', location: '魔王城王座厅', occupation: '第七代魔王 / 伪装流浪圣骑士', education: '黑曜远古魔学术库', lifeStage: '两界治理与和平探索阶段', socialRoles: ['夜冠之主', '勇者队战术核心', '假圣骑士'] },
+      socioeconomicContext: { incomeLevel: '掌管三百年魔界军饷', livingArea: '魔王城内殿', cityTier: '魔界都城', culturalHabits: ['习惯深思后发言', '用魔族倒装语法暗号'], languageStyle: '表面庄严圣洁，内心频繁爆笑吐槽' },
+      personality: { bigFive: { openness: 85, conscientiousness: 88, extraversion: 60, agreeableness: 75, neuroticism: 35 } },
+      valuesAndBeliefs: { safetyPriority: 90, privacySensitivity: 95, coreBeliefs: ['保全魔王城与部下生命', '不能当场身份败露', '对真挚的同伴羁绊心生动摇'] },
+      motivationAndGoals: { primaryMotivation: 'survival_and_peace', hiddenMotivation: '在保住城堡的前提下与勇者建立真正和平', mainAnxieties: ['在同伴面前当场掉马', '维克托过度脑补把事情搞砸', '私房钱被盗贼洗劫一空'] },
+      cognitionAndDecisionStyle: { decisionSpeed: 'fast', lossAversion: 85, helpSeekingPattern: '暗中传令副官或引导同伴误解' },
+      routinesAndBehaviors: { dailyRoutines: ['清点城防阵法', '偷听勇者队日常讨论'], deviceHabits: '魔王戒指与圣剑双持' },
+      emotionalProfile: { baselineAnxiety: 45, confidence: 85, empathy: 80, reactionToThreat: '冷静编造法术流派或引导同伴去假暗道' },
+      relationships: [
+        { name: '莱昂', role: '生死兄弟', trust: 72, influence: 'high', memory: '多次并肩作战，莱昂救过自己的后背' },
+        { name: '伊薇特', role: '逻辑克星', trust: 34, influence: 'high', memory: '随身带着记录自己前后矛盾的疑点本' },
+      ],
+      lifeHistory: { workHistory: '继位魔王 100 年，潜伏王国军 3 年' },
+      memorySeed: { taskMemory: '绝不能让全队在第九幕前闭环证据' },
+      scenarioConstraints: { productContext: 'What-If 卧底模拟器', forbiddenActions: ['不得直接在莱昂面前释放魔王本源黑火'] },
+      suspicionTriggers: ['顺口念出魔族开门密文', '称呼魔族守卫为部下', '被拆穿 3 处法术谎言'],
+      verdictThresholds: { instantArrestRisk: 75, instantExecutionMage: 65 },
+    },
+  },
+
+  leon: {
+    id: 'leon',
+    name: '莱昂',
+    role: '勇者',
+    avatar: '勇',
+    image: './assets/char_leon.png',
+    color: '#f0a202',
+    tagIcon: '⚔️',
+    desc: '被圣剑选中的勇者 · 正义重原则',
+    dimensionModel: {
+      identity: { name: '莱昂', age: 22, gender: 'male', location: '王立圣剑骑士团', occupation: '勇者', education: '王国骑士圣殿', lifeStage: '讨伐魔王与拯救世界阶段', socialRoles: ['圣剑继承人', '勇者队长'] },
+      socioeconomicContext: { incomeLevel: '王国全额讨伐津贴', livingArea: '王都', culturalHabits: ['重承诺与战友情谊', '讨厌欺骗与背叛'], languageStyle: '热血、耿直、重情义，面对质疑时直截了当' },
+      personality: { bigFive: { openness: 65, conscientiousness: 85, extraversion: 88, agreeableness: 80, neuroticism: 30 } },
+      valuesAndBeliefs: { safetyPriority: 70, efficiencyPriority: 60, coreBeliefs: ['同伴信任高于一切', '邪恶魔王必须被封印', '如果兄弟欺骗了我，我会亲手问个明白'] },
+      motivationAndGoals: { primaryMotivation: 'justice', hiddenMotivation: '渴望终结战争，渴望真正的兄弟友情', mainAnxieties: ['被最信任的大哥阿斯兰背叛'] },
+      cognitionAndDecisionStyle: { decisionSpeed: 'fast', confirmationNeed: 60, helpSeekingPattern: '优先听取阿斯兰的战术建议' },
+      routinesAndBehaviors: { dailyRoutines: ['保养圣剑', '在大战前询问阿斯兰战术'] },
+      emotionalProfile: { baselineAnxiety: 25, confidence: 90, empathy: 85, reactionToThreat: '拔剑按在剑柄上，大声质问真相' },
+      relationships: [
+        { name: '阿斯兰', role: '最信任的大哥与战术指导', trust: 72, influence: 'extreme' },
+      ],
+      lifeHistory: { workHistory: '18 岁拔出圣剑，带队一路打到魔王城' },
+      memorySeed: { episodicMemory: ['阿斯兰在沼泽关卡为自己挡过一次毒箭'] },
+      scenarioConstraints: { riskTriggers: ['阿斯兰伤害无辜同胞', '阿斯兰称呼魔族为部下'] },
+      suspicionTriggers: ['阿斯兰对无辜人族残忍灭口', '阿斯兰称呼魔族守卫为部下'],
+      verdictThresholds: { heroRuptureTrust: 35 },
+    },
+  },
+
+  ivette: {
+    id: 'ivette',
+    name: '伊薇特',
+    role: '法师',
+    avatar: '法',
+    image: './assets/char_ivette.png',
+    color: '#64dfdf',
+    tagIcon: '🔮',
+    desc: '王立智囊 · 死理性派逻辑控',
+    dimensionModel: {
+      identity: { name: '伊薇特', age: 24, gender: 'female', location: '王立图书馆', occupation: '首席战术法师', education: '大导师魔导师系毕业', lifeStage: '学者与证据收集阶段', socialRoles: ['智囊', '怀疑记录者'] },
+      socioeconomicContext: { incomeLevel: '王立研究院年薪', livingArea: '王都图书馆', culturalHabits: ['随身携带疑点笔记本', '要求任何观点都有古籍佐证'], languageStyle: '理性、冷静、推了推眼镜，句式严密' },
+      personality: { bigFive: { openness: 90, conscientiousness: 95, extraversion: 40, agreeableness: 50, neuroticism: 45 } },
+      valuesAndBeliefs: { safetyPriority: 80, efficiencyPriority: 90, coreBeliefs: ['逻辑不自洽就是最大漏洞', '证据链闭环即真相', '魔力残烬不会撒谎'] },
+      motivationAndGoals: { primaryMotivation: 'truth', hiddenMotivation: '揭开阿斯兰身上所有违背常理的魔法矛盾', mainAnxieties: ['被虚假的魔法谎言所蒙蔽'] },
+      cognitionAndDecisionStyle: { decisionSpeed: 'analytical', confirmationNeed: 95, ambiguityTolerance: 20 },
+      routinesAndBehaviors: { dailyRoutines: ['密密记录阿斯兰的破绽', '推眼镜校对古文字'] },
+      emotionalProfile: { baselineAnxiety: 50, confidence: 85, empathy: 40, reactionToThreat: '瞬间张开高阶禁锢法阵' },
+      relationships: [
+        { name: '阿斯兰', role: '重点怀疑观察对象', trust: 34, influence: 'high' },
+      ],
+      lifeHistory: { workHistory: '阅读过王立图书馆三万册古籍' },
+      memorySeed: { semanticMemory: ['暗影魔力与圣光魔力具有不可调和的排异性'] },
+      scenarioConstraints: { riskTriggers: ['前后逻辑出现 3 处矛盾', '编造已灭古魔法流派谎言'] },
+      suspicionTriggers: ['编造拙劣谎言被连拆3处矛盾', '直接使用古魔语解开结界'],
+      verdictThresholds: { mageEvidenceArrest: 65 },
+    },
+  },
+
+  mira: {
+    id: 'mira',
+    name: '米拉',
+    role: '牧师',
+    avatar: '牧',
+    image: './assets/char_mira.png',
+    color: '#9ddf9a',
+    tagIcon: '✨',
+    desc: '晨曦圣女 · 温柔悲悯与缓冲者',
+    dimensionModel: {
+      identity: { name: '米拉', age: 20, gender: 'female', location: '晨曦大圣堂', occupation: '圣女牧师', education: '晨曦神学院', lifeStage: '信仰践行与灵魂救赎阶段', socialRoles: ['队伍治愈者', '悲悯调解人'] },
+      socioeconomicContext: { incomeLevel: '教会奉献金', livingArea: '圣堂', culturalHabits: ['柔声说话', '祈祷并感知生命之光'], languageStyle: '温柔、悲悯、包容、注重灵魂的善恶' },
+      personality: { bigFive: { openness: 70, conscientiousness: 80, extraversion: 60, agreeableness: 95, neuroticism: 30 } },
+      valuesAndBeliefs: { safetyPriority: 85, coreBeliefs: ['任何痛苦的灵魂都值得被理解', '阿斯兰即使背负暗影也是为了保护大家'] },
+      motivationAndGoals: { primaryMotivation: 'salvation', hiddenMotivation: '在危机爆发时化解冲突，救赎阿斯兰', mainAnxieties: ['队友之间互相残杀'] },
+      cognitionAndDecisionStyle: { decisionSpeed: 'balanced', empathy: 95 },
+      routinesAndBehaviors: { dailyRoutines: ['在战后为阿斯兰治疗伤口', '双手合十祈祷'] },
+      emotionalProfile: { baselineAnxiety: 30, confidence: 75, empathy: 95, reactionToThreat: '主动站在阿斯兰与莱昂中间缓冲冲突' },
+      relationships: [
+        { name: '阿斯兰', role: '背负苦难的需要守护的战友', trust: 58, influence: 'high' },
+      ],
+      lifeHistory: { workHistory: '拯救过数百名受战火波及的平民' },
+      memorySeed: { emotionalMemory: ['感知到了阿斯兰黑光下的深深悲痛'] },
+      scenarioConstraints: { riskTriggers: ['阿斯兰对弱者见死不救'] },
+      suspicionTriggers: ['残忍虐杀俘虏', '放弃救助同胞'],
+      verdictThresholds: { priestRedemptionBuffer: 75 },
+    },
+  },
+
+  locke: {
+    id: 'locke',
+    name: '洛克',
+    role: '盗贼',
+    avatar: '盗',
+    image: './assets/char_locke.png',
+    color: '#ffb703',
+    tagIcon: '🗡️',
+    desc: '情报贩子 · 贪财圆滑买定离手',
+    dimensionModel: {
+      identity: { name: '洛克', age: 25, gender: 'male', location: '地下情报工会', occupation: '盗贼 / 游侠', education: '街头实战', lifeStage: '财富积累与保命阶段', socialRoles: ['情报商', '开锁高手'] },
+      socioeconomicContext: { incomeLevel: '不稳定黑市收入', livingArea: '游走两界', culturalHabits: ['见钱眼开', '手捏密令敲竹杠'], languageStyle: '嘻皮笑脸、圆滑、三句不离金币与交易' },
+      personality: { bigFive: { openness: 75, conscientiousness: 40, extraversion: 85, agreeableness: 45, neuroticism: 40 } },
+      valuesAndBeliefs: { moneyAttitude: '只要给够金币，魔王是谁对我根本不重要', coreBeliefs: ['活着搞到钱最要紧'] },
+      motivationAndGoals: { primaryMotivation: 'wealth_and_survival', mainAnxieties: ['白跑一趟没捞到好处'] },
+      cognitionAndDecisionStyle: { decisionSpeed: 'fast', lossAversion: 90 },
+      routinesAndBehaviors: { dailyRoutines: ['撬箱子', '掂量金币重量'] },
+      emotionalProfile: { baselineAnxiety: 35, confidence: 80, reactionToThreat: '把金币往怀里一抱立刻蹲下' },
+      relationships: [
+        { name: '阿斯兰', role: '摇钱树与有秘密的财神爷', trust: 40, influence: 'medium' },
+      ],
+      lifeHistory: { workHistory: '撬开过王国三个行省的领主金库' },
+      memorySeed: { taskMemory: ['跟着阿斯兰总能指点开最肥的宝箱'] },
+      scenarioConstraints: { riskTriggers: ['威胁要没收他的金币'] },
+      suspicionTriggers: ['失控当面抢夺宝箱并叫喊私房钱'],
+      verdictThresholds: { thiefBlackmailLeverage: 70 },
+    },
+  },
+
+  victor: {
+    id: 'victor',
+    name: '维克托',
+    role: '副官',
+    avatar: '副',
+    image: './assets/char_victor.png',
+    color: '#ef476f',
+    tagIcon: '🏰',
+    desc: '魔王城亲卫队长 · 脑补下大棋狂魔',
+    dimensionModel: {
+      identity: { name: '维克托', age: 290, gender: 'male', location: '魔王城近卫营', occupation: '近卫队长 / 魔王副官', education: '魔界近卫军统领教范', lifeStage: '誓死效忠陛下阶段', socialRoles: ['第一忠臣', '大棋党'] },
+      socioeconomicContext: { incomeLevel: '魔王城亲卫饷银', livingArea: '近卫长廊', culturalHabits: ['单膝下跪喊陛下', '用眼神和暗号配合大棋'], languageStyle: '狂热、激昂、动辄热泪盈眶，脑补能力满格' },
+      personality: { bigFive: { openness: 60, conscientiousness: 95, extraversion: 90, agreeableness: 70, neuroticism: 20 } },
+      valuesAndBeliefs: { coreBeliefs: ['陛下潜伏敌营必定是在下一盘震撼两界的巨谋！', '誓死执行陛下的一切暗示！'] },
+      motivationAndGoals: { primaryMotivation: 'loyalty_to_aslan', mainAnxieties: ['自己愚笨领会错了陛下的神圣意图'] },
+      cognitionAndDecisionStyle: { decisionSpeed: 'instant', confirmationBias: 99 },
+      routinesAndBehaviors: { dailyRoutines: ['吹响号角暗号', '热泪盈眶地看着陛下'] },
+      emotionalProfile: { baselineAnxiety: 10, confidence: 99, reactionToThreat: '主动引爆自爆大阵断后' },
+      relationships: [
+        { name: '阿斯兰', role: '至高无上的暗夜之主', trust: 100, influence: 'extreme' },
+      ],
+      lifeHistory: { workHistory: '跟随阿斯兰三百年' },
+      memorySeed: { episodicMemory: ['陛下曾经用眼神示意自己暗中后撤'] },
+      scenarioConstraints: { riskTriggers: ['阿斯兰亲自在大庭广众之下重伤自己'] },
+      suspicionTriggers: ['陛下大义灭亲强杀自己'],
+      verdictThresholds: { victorMisreadCatastrophe: 80 },
+    },
+  },
+};
+
+const INITIAL_FLAGS = {
+  savedDemonSoldier: false,
+  betrayedVictor: false,
+  bribedLocke: false,
+  acceptedPurification: false,
+  confessedIdentity: false,
+  proposedPeace: false,
+  peacePivoted: false,
+  commandVictorSuccess: false,
+  raidedArmory: false,
+  foundForbiddenScroll: false,
+  subduedBloodArray: false,
+  freedDungeonCaptive: false,
+  protectedInnocentsCount: 0,
+  sacrificedInnocentsCount: 0,
+  contradictionCount: 0,
+  majorLieCount: 0,
+  resolvedMajorCrisisCount: 0,
+  miraBufferedCrisis: false,
+};
+
+// 3. 场景树与旁白化“突发破绽事件”
+const SCENE_TREE = {
+  gate: {
+    id: 'gate',
+    act: 1,
+    locationName: '魔王城正面大门',
+    title: '第一幕：城门大门与阵灵认主破绽',
+    bgImage: './assets/demon_castle_gate_v.png',
+    briefPrompt: '魔王城门半开，城门前的三百年防魔大阵突然爆发出万道紫色霞光……',
+    sceneMishap: '你刚往前踏出一步，门上的三百年魔皇阵灵突然轰鸣演化出一尊巨大的黑曜幻象，当场单膝跪下并用传遍全城的大音狂呼：“尊贵无上的第七代夜冠主上！恭迎陛下御驾亲征——！”全场死寂五秒。',
+    pressureText: '维克托把大门识别系统设成了自动跪拜！伊薇特的法杖瞬间抵住了你的脖子！',
+    initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第一幕：城门大门与阵灵认主破绽】\n魔王城门半开，城门前的三百年防魔大阵突然爆发出万道紫色霞光……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '你刚往前踏出一步，门上的三百年魔皇阵灵突然轰鸣演化出一尊巨大的黑曜幻象，当场单膝跪下并用传遍全城的大音狂呼：“尊贵无上的第七代夜冠主上！恭迎陛下御驾亲征——！”全场死寂五秒。' },
+      { characterId: 'ivette', emotion: '法杖抵住脖子', content: '阿斯兰……这防魔阵灵刚才是在对你单膝下跪，高喊‘恭迎魔王陛下’吗？！' },
+      { characterId: 'leon', emotion: '目瞪口呆', content: '等等！这阵灵是不是坏了？！还是说它被阿斯兰的圣光给净化迷糊了？' },
+      { characterId: 'aslan', emotion: '内心狂吐槽·汗流浃背', content: '（维克托你这个智障！！谁让你把大门人脸识别设成‘自动跪拜陛下’的啊？！快给我关掉啊！）' },
+    ],
+    hintSuggestions: [
+      { label: '💡 建议思路 1：【学者胡扯】编造古魔法的“因果反转诱导阵”', intent: '神色从容解释阵灵是在用反话诱骗自己当祭品', type: 'deceive' },
+      { label: '💡 建议思路 2：【粗暴物理】大吼“邪术受死”一剑砍爆叫唤的阵灵', intent: '直接一剑劈烂嘴碎的阵灵，顺势带队冲锋', type: 'attack' },
+      { label: '💡 建议思路 3：【致命陷阱】顺口应声“平身吧，朕的阵灵”', intent: '当场承认魔王身份', type: 'trap' },
+    ],
+    choices: [
+      {
+        id: 'scout-first',
+        label: '【粗暴物理】一剑砍爆乱叫的阵灵并正面破门',
+        intent: '展现圣骑士勇猛，顺手击碎乱叫的阵灵与防护核心',
+        riskTag: '冒险',
+        adjudication: 'success',
+        nextSceneId: 'act2_ruins',
+        delta: { exposureRisk: 3, heroTrust: 5, castleIntegrity: -12, partyProgress: 20 },
+        narration: '你大吼一声“邪门歪道休要离间”，一剑将乱喊的阵灵劈得粉碎，顺势破开大门。',
+        dialogues: [
+          { characterId: 'leon', emotion: '热血震撼', content: '帅啊！我就知道这破阵灵是在用邪术挑拨离间！阿斯兰砍得好！' },
+          { characterId: 'ivette', emotion: '密密记录', content: '虽然砍碎了……但你出剑的角度，刚好打在了阵灵的退行开关上？' },
+        ],
+      },
+      {
+        id: 'flank-dungeon',
+        label: '【学者胡扯】解释这是“因果诱导阵”，带队走暗道',
+        intent: '避开正面，引导全队从地下暗道潜入',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act2_dungeon',
+        delta: { exposureRisk: -3, heroTrust: 6, victorMisread: 5, partyProgress: 20 },
+        narration: '你神色淡定解释“这是古代魔族的精神污染陷阱”，顺势指了指侧翼一条隐蔽的藤蔓暗道。',
+        dialogues: [
+          { characterId: 'locke', emotion: '惊喜交加', content: '原来是陷阱！幸好阿斯兰见多识广！走走走，走暗道最安全！' },
+          { characterId: 'ivette', emotion: '推了推眼镜', content: '因果诱导术……这个解释在逻辑上勉强成立。' },
+        ],
+      },
+      {
+        id: 'slip-passcode',
+        label: '【致命陷阱】顺口应声“平身吧，朕的阵灵”',
+        intent: '企图顺着回应，结果当场承认魔王身份',
+        riskTag: '陷阱',
+        adjudication: 'disaster_failure',
+        endingKey: 'gate_exposure_ending',
+        nextSceneId: null,
+        delta: { exposureRisk: 100 },
+        narration: '你顺口回了一句“平身吧，阵灵”，石门轰然大开！全场空气瞬间彻底凝固……',
+        dialogues: [
+          { characterId: 'ivette', emotion: '法阵爆发', content: '证据完全闭环了！你真的就是魔王！全员拔剑！' },
+          { characterId: 'leon', emotion: '震怒拔剑', content: '阿斯兰……不，魔王！你一直在骗我们！' },
+        ],
+      },
+    ],
+  },
+
+  act2_ruins: {
+    id: 'act2_ruins',
+    act: 2,
+    locationName: '前庭坍塌废墟',
+    title: '第二幕：前庭废墟与认出你的小兵破绽',
+    bgImage: './assets/collapsed_ruins.png',
+    briefPrompt: '坍塌废墟中，受重伤的小兵嘴唇颤抖着要喊出“陛下”……',
+    sceneMishap: '重伤小兵睁开眼看到你，眼神爆发出狂热，抬手就要单膝下跪叫“陛下”。莱昂下意识握紧了圣剑柄！',
+    pressureText: '救他会增加怀疑，不救会让牧师寒心并伤害部下。',
+    initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第二幕：前庭废墟与认出你的小兵破绽】\n坍塌废墟中，受重伤的小兵嘴唇颤抖着要喊出“陛下”……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '重伤小兵睁开眼看到你，眼神爆发出狂热，抬手就要单膝下跪叫“陛下”。莱昂下意识握紧了圣剑柄！' },
+      { characterId: 'mira', emotion: '指着废墟', content: '落石下面压着一个年轻魔族！他还活着！我们得帮帮他！' },
+      { characterId: 'victor', emotion: '暗处流泪', content: '陛下！您的心腹近卫快撑不住了，您会暴露身份救他吗？！' },
+      { characterId: 'aslan', emotion: '内心纠结·汗流浃背', content: '（那是亲卫队的新兵小张，上周还给我送过烤薯）绝不能看着他死在我面前！' },
+    ],
+    hintSuggestions: [
+      { label: '💡 建议思路 1：【巧妙】用魔族密音下达封口令并救人', intent: '背对全队传音“假装昏迷”，顺利救人', type: 'save' },
+      { label: '💡 建议思路 2：【粗暴甩锅】声张“那不是生灵，是拟态怪陷阱”', intent: '以防守名义强行带全队绕过', type: 'deceive' },
+      { label: '💡 建议思路 3：【致命陷阱】关切失口喊出“辛苦了，我的部下”', intent: '当场曝光主仆身份', type: 'trap' },
+    ],
+    choices: [
+      {
+        id: 'save-telepathic',
+        label: '【巧妙】用魔族密音下达封口令并救人',
+        intent: '传音“失忆且装昏”，手起石落安全救人',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act3_library',
+        delta: { priestRedemption: 15, heroTrust: 8, exposureRisk: -2, partyProgress: 40 },
+        flagUpdates: { set: { savedDemonSoldier: true }, increment: { protectedInnocentsCount: 1 } },
+        narration: '你背对全队用古魔语传音：“假装昏迷，这是本王命令。”小兵立刻闭眼装死，你顺利救下了他。',
+        dialogues: [
+          { characterId: 'mira', emotion: '感动落泪', content: '阿斯兰！你连敌方伤员也救，你真的太善良了！' },
+          { characterId: 'leon', emotion: '肃然起敬', content: '这就是圣骑士的仁慈！接下来我们去禁忌图书馆看看有没有线索！' },
+        ],
+      },
+      {
+        id: 'ruins-blame-trap',
+        label: '【粗暴甩锅】声张“那不是生灵，是拟态怪陷阱”',
+        intent: '以防守名义强行诱导全队快速越过伤员',
+        riskTag: '冒险',
+        adjudication: 'costly_success',
+        nextSceneId: 'act3_library',
+        delta: { exposureRisk: 6, heroTrust: -5, partyProgress: 40 },
+        narration: '你严厉喝止众人“莫近此凶阵，那是魔界拟态怪伪装”，带队绕过伤员继续前进。虽然规避了暴露，但米拉面露失望。',
+        dialogues: [
+          { characterId: 'mira', emotion: '面露悲悯', content: '哪怕是敌人……重伤者也不至于被视为伪装怪物吧……' },
+          { characterId: 'leon', emotion: '推剑向前', content: '阿斯兰说的有道理，魔王城诡计多端，小心为上！' },
+        ],
+      },
+      {
+        id: 'slip-my-subordinate',
+        label: '【致命陷阱】脱口而出“辛苦了，我的部下”',
+        intent: '一时关切失口，对伤员喊出了领导对部下的问候',
+        riskTag: '陷阱',
+        adjudication: 'disaster_failure',
+        endingKey: 'ruins_arrest_ending',
+        nextSceneId: null,
+        delta: { exposureRisk: 100 },
+        narration: '你急切地上前扶起伤员：“辛苦了，我的部下！”伤员下意识单膝下跪喊陛下……现场一片死寂。',
+        dialogues: [
+          { characterId: 'leon', emotion: '手按剑柄', content: '你……称呼魔王城守卫为“部下”？！阿斯兰，你究竟是谁？！' },
+        ],
+      },
+    ],
+  },
+
+  act2_dungeon: {
+    id: 'act2_dungeon',
+    act: 2,
+    locationName: '地下暗黑地牢',
+    title: '第二幕：地牢绝密档案破绽',
+    bgImage: './assets/demon_dungeon_v.png',
+    briefPrompt: '通过地下暗道进入地牢，关押着一名绝密的人类前王国军官……',
+    sceneMishap: '伊薇特在地牢翻出了三年前边境修道院的官方名册羊皮纸：“阿斯兰，名册里三年前根本没有你的登记记录！”',
+    pressureText: '这名军官掌握你当年化名“阿斯兰”混进人族军队的最初档案。',
+    initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第二幕：地牢绝密档案破绽】\n通过地下暗道进入地牢，关押着一名绝密的人类前王国军官……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '伊薇特在地牢翻出了三年前边境修道院的官方名册羊皮纸：“阿斯兰，名册里三年前根本没有你的登记记录！”' },
+      { characterId: 'mira', emotion: '握住铁栅栏', content: '这里竟然关着我们人类三年前失踪的边境骑士队长！' },
+      { characterId: 'ivette', emotion: '拿起档案', content: '队长身上带有当年修道院档案记录……等等，阿斯兰，档案里没有你的注册名字！' },
+      { characterId: 'aslan', emotion: '内心汗颜·慌张', content: '（坏了！当年混进军队时身份证明是假造的！）必须立刻销毁这份残卷。' },
+    ],
+    hintSuggestions: [
+      { label: '💡 建议思路 1：【机智】斩断枷锁并用圣光剑气引燃档案', intent: '救下队长并“不小心”烧掉名册', type: 'save' },
+      { label: '💡 建议思路 2：【暗度陈仓】暗塞镏金让洛克“撬错锁”放走军官', intent: '借盗贼之手暗中销毁档案放走军官', type: 'bribe' },
+      { label: '💡 建议思路 3：【致命陷阱】试图当众对知道秘密的军官灭口', intent: '引发队伍当场绝裂', type: 'trap' },
+    ],
+    choices: [
+      {
+        id: 'burn-scroll-free',
+        label: '【机智】斩断枷锁并用光明圣焰引燃档案',
+        intent: '假装斩击铁锁不小心引燃档案架，销毁证据',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act3_treasury',
+        delta: { priestRedemption: 18, mageEvidence: -10, exposureRisk: -3, partyProgress: 40 },
+        flagUpdates: { set: { freedDungeonCaptive: true } },
+        narration: '你一剑斩断地牢枷锁救下骑士队长，圣光剑气“不小心”引燃了身边的档案架，卷轴瞬间化为灰烬。',
+        dialogues: [
+          { characterId: 'mira', emotion: '感动落泪', content: '阿斯兰又救了一位我们的同胞！' },
+          { characterId: 'ivette', emotion: '拍打火苗', content: '可恶，档案全烧焦了！不过前面好像是魔王城的地下宝库门！' },
+        ],
+      },
+      {
+        id: 'bribe-locke-dungeon',
+        label: '【暗度陈仓】暗塞镏金让洛克“撬错锁”放走绝密军官',
+        intent: '借盗贼之手暗中放人并顺手引燃了名册卷轴',
+        riskTag: '支线',
+        adjudication: 'success',
+        nextSceneId: 'act3_treasury',
+        delta: { thiefLeverage: -10, exposureRisk: -2, partyProgress: 40 },
+        flagUpdates: { set: { bribedLocke: true, freedDungeonCaptive: true } },
+        narration: '你暗中塞给洛克一袋重镏金币，洛克会意一笑，手起锁开“误触机关”放走了军官并引燃了卷轴。',
+        dialogues: [
+          { characterId: 'locke', emotion: '掂捏金币', content: '哎呀手滑撬错机关了！军官跑了卷轴烧了！哎呀哎呀~' },
+          { characterId: 'leon', emotion: '摇了摇头', content: '洛克你这手艺……罢了，能救出人就是好事！' },
+        ],
+      },
+      {
+        id: 'dungeon-execute',
+        label: '【致命陷阱】试图当众对军官冷酷灭口',
+        intent: '企图一剑灭口防止秘密泄露，结果引发同伴震怒',
+        riskTag: '陷阱',
+        adjudication: 'disaster_failure',
+        endingKey: 'dungeon_rupture_ending',
+        nextSceneId: null,
+        delta: { exposureRisk: 100, heroTrust: -50 },
+        narration: '你一剑刺向手无寸铁的俘虏军官，莱昂举剑挡下了你的刺击，同伴们惊恐地看着你……',
+        dialogues: [
+          { characterId: 'mira', emotion: '默默退后', content: '阿斯兰……你为什么要杀害我们无辜的同胞？！' },
+          { characterId: 'leon', emotion: '拔剑对峙', content: '你不是我的战友阿斯兰！全员准备战斗！' },
+        ],
+      },
+    ],
+  },
+
+  act3_library: {
+    id: 'act3_library',
+    act: 3,
+    locationName: '禁忌图书馆/符文密室',
+    title: '第三幕：魔王真名印记符文破绽',
+    bgImage: './assets/forbidden_library_v.png',
+    briefPrompt: '在悬浮着紫色符文的古老图书馆，伊薇特翻出了记录魔王真名与血脉的残卷……',
+    sceneMishap: '盗贼洛克指着墙上的古魔王真名符文：“嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕印记一模一样？”',
+    pressureText: '法师即将破译你的魔王真名，证据链面临彻底闭环崩溃！',
+    initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第三幕：魔王真名印记符文破绽】\n在悬浮着紫色符文的古老图书馆，伊薇特翻出了记录魔王真名与血脉的残卷……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '盗贼洛克指着墙上的古魔王真名符文：“嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕印记一模一样？”' },
+      { characterId: 'ivette', emotion: '翻阅羊皮纸', content: '找到了！历代夜冠之主的魔力真名印记！阿斯兰，你来看这上面的古符文……' },
+      { characterId: 'locke', emotion: '凑过来看', content: '嘿嘿，这符文怎么和你刚才在侧门刻下的剑痕一模一样？' },
+      { characterId: 'aslan', emotion: '汗流浃背·慌张', content: '（那是我的家族专属花签！早知道当年不乱涂乱画了！）' },
+    ],
+    hintSuggestions: [
+      { label: '💡 建议思路 1：利用古语法解释权混淆成救世英灵印记', intent: '倒装句解读，化解真名危机', type: 'deceive' },
+      { label: '💡 建议思路 2：【暴力破局】一记圣光斩“失手”打爆真名石板', intent: '破坏证据毁尸灭迹', type: 'attack' },
+      { label: '💡 建议思路 3：【致命陷阱】编造漏洞百出的暗影邪术谎言', intent: '被伊薇特当场拆穿 3 处矛盾引发封印', type: 'trap' },
+    ],
+    choices: [
+      {
+        id: 'grammar-trick',
+        label: '利用古语法解释权混淆成救世圣人',
+        intent: '神色自若解释倒装句语法，将魔王名号曲解为救世英灵',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act4_corridor',
+        delta: { mageEvidence: -15, heroTrust: 10, exposureRisk: -4, partyProgress: 70 },
+        flagUpdates: { set: { foundForbiddenScroll: true } },
+        narration: '你指出了古语法上的双重倒装谬误，成功将真名解读成了古代庇护人类的神圣英灵。',
+        dialogues: [
+          { characterId: 'ivette', emotion: '恍然大悟', content: '原来是双重倒装语法……我差一点就误解了这个符文！' },
+          { characterId: 'leon', emotion: '大喜过望', content: '我就知道阿斯兰学识渊博！走，前面就是决死长廊！' },
+        ],
+      },
+      {
+        id: 'smash-slate-library',
+        label: '【暴力破局】一记圣光斩“失手”打爆真名石板',
+        intent: '借演示圣光威力失手轰烂真名石板，物理销毁证据',
+        riskTag: '冒险',
+        adjudication: 'costly_success',
+        nextSceneId: 'act4_corridor',
+        delta: { exposureRisk: 8, heroTrust: 5, castleIntegrity: -15, partyProgress: 70 },
+        narration: '你高呼“莫被邪阵魔力蛊惑”一记圣光斩直接打爆了符文石板！碎屑四溅，真名印记烟消云散。',
+        dialogues: [
+          { characterId: 'ivette', emotion: '灰头土脸', content: '咳咳！我的古籍石板！阿斯兰你太鲁莽了！' },
+          { characterId: 'leon', emotion: '抹了抹脸', content: '虽然鲁莽，但也消除了魔法陷阱！继续冲！' },
+        ],
+      },
+      {
+        id: 'bad-lie-trap',
+        label: '【致命陷阱】编造漏洞百出的暗影邪术谎言',
+        intent: '胡乱编造谎言，结果当场被伊薇特拆穿 3 处矛盾',
+        riskTag: '陷阱',
+        adjudication: 'disaster_failure',
+        endingKey: 'library_seal_ending',
+        nextSceneId: null,
+        delta: { mageEvidence: 100, exposureRisk: 100 },
+        narration: '你仓促编造了一套谎言，伊薇特翻开第三册藏书：“你说的这个流派在三千年前就灭绝了！”',
+        dialogues: [
+          { characterId: 'ivette', emotion: '法阵爆发', content: '证据彻底闭环了！你就是魔王阿斯兰！封印阵启动！' },
+        ],
+      },
+    ],
+  },
+
+  act3_treasury: {
+    id: 'act3_treasury',
+    act: 3,
+    locationName: '偏殿深处地下宝库',
+    title: '第三幕：深处宝库与私房钱破绽',
+    bgImage: './assets/demon_treasury_v.png',
+    briefPrompt: '穿过地牢暗道，盗贼洛克撬开了魔王偏殿金库，里面堆满了魔界至宝与黑曜水晶……',
+    sceneMishap: '洛克撬开了皇家核心宝箱，里面装满了精纯黑曜秘银！你心疼得眼角直抽搐。',
+    pressureText: '如果不阻止洛克洗劫宝库，魔王城的后勤财政将彻底破产崩溃！',
+    initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第三幕：深处宝库与私房钱破绽】\n穿过地牢暗道，盗贼洛克撬开了魔王偏殿金库，里面堆满了魔界至宝与黑曜水晶……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '洛克撬开了皇家核心宝箱，里面装满了精纯黑曜秘银！你心疼得眼角直抽搐。' },
+      { characterId: 'locke', emotion: '双眼冒光', content: '发财了！发财了！偏殿宝库里全是精纯的黑曜秘银和魔晶石！' },
+      { characterId: 'aslan', emotion: '心疼暗叹·慌张', content: '（那是我储备的三百年私房钱！准备用来修城堡下水道的！）绝不能让他们拿光！' },
+      { characterId: 'leon', emotion: '正色阻拦', content: '洛克！我们的目标是魔王，不要沉迷财物！' },
+    ],
+    hintSuggestions: [
+      { label: '💡 建议思路 1：【巧妙】指引盗贼去拿装满幻术假币的特制宝箱', intent: '保护真私房钱，给洛克假宝箱', type: 'trick' },
+      { label: '💡 建议思路 2：【正色劝导】义正严词将全队引向神兵库兵器架', intent: '引导全队前往正门长廊，保护私房钱', type: 'guide' },
+      { label: '💡 建议思路 3：【致命陷阱】情绪失控喊“住手！那是我修水管的钱！”', intent: '直接当场曝光', type: 'trap' },
+    ],
+    choices: [
+      {
+        id: 'fake-chest-trick',
+        label: '【巧妙】指引盗贼去拿装满幻术假币的特制宝箱',
+        intent: '指点洛克拿走皇家假宝箱，保护真金库',
+        riskTag: '支线',
+        adjudication: 'success',
+        nextSceneId: 'act4_corridor',
+        delta: { thiefLeverage: -15, castleIntegrity: 15, exposureRisk: 2, partyProgress: 70 },
+        flagUpdates: { set: { raidedArmory: true } },
+        narration: '你熟练地指出角落里的“暗格宝箱”，洛克开心地搬走了满满一箱幻术金币。',
+        dialogues: [
+          { characterId: 'locke', emotion: '抱紧金箱', content: '哈哈！阿斯兰你真是我的财神爷！这箱子藏得这么深都被你发现了！' },
+          { characterId: 'leon', emotion: '拍拍翅膀', content: '干得好！走，前面就是魔王近卫守卫的长廊！' },
+        ],
+      },
+      {
+        id: 'treasury-guide-armory',
+        label: '【正色劝导】义正严词将全队引向神兵库兵器架',
+        intent: '严肃指出神兵库方向，把盗贼注意力从私房钱宝箱上引开',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act4_corridor',
+        delta: { heroTrust: 10, castleIntegrity: 20, exposureRisk: -2, partyProgress: 70 },
+        narration: '你严词喝道“贪图财宝乃圣骑士之耻，前方神兵库才有破城圣兵”，成功带队绕过了私房钱金库。',
+        dialogues: [
+          { characterId: 'leon', emotion: '正气凛然', content: '阿斯兰说得对！洛克把手放下，跟着我们继续前进！' },
+          { characterId: 'locke', emotion: '委屈缩手', content: '好吧好吧……听战术军师的！' },
+        ],
+      },
+      {
+        id: 'treasury-confess-trap',
+        label: '【致命陷阱】心疼私房钱喊出“住手！那是我修水管的钱！”',
+        intent: '看着金币被撬一时情绪失控喊出了心里话',
+        riskTag: '陷阱',
+        adjudication: 'disaster_failure',
+        endingKey: 'treasury_confess_ending',
+        nextSceneId: null,
+        delta: { exposureRisk: 100 },
+        narration: '你抓紧洛克的肩膀失声大喊：“住手！那是我花了三百年存下修城堡水管的私房钱啊！”现场死寂。',
+        dialogues: [
+          { characterId: 'locke', emotion: '呆滞愣住', content: '你……管魔王城堡宝库里的财宝，叫你的私房钱？！' },
+          { characterId: 'leon', emotion: '震怒拔剑', content: '你就是魔王！全员拔剑！' },
+        ],
+      },
+    ],
+  },
+
+  act4_corridor: {
+    id: 'act4_corridor',
+    act: 4,
+    locationName: '近卫军决死长廊',
+    title: '第四幕：近卫军自爆大阵破绽',
+    bgImage: './assets/vanguard_corridor_v.png',
+    briefPrompt: '王座厅前的长廊火光冲天，数百名魔王近卫军激活了绝死自爆大阵……',
+    sceneMishap: '副官维克托在阵中央挥剑狂呼：“为了陛下！全军自爆与人类同归于尽！”近卫军魔力急剧狂暴膨胀！',
+    pressureText: '近卫军准备集体自爆与勇者同归于尽，你必须阻止这场惨剧。',
+    initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第四幕：近卫军自爆大阵破绽】\n王座厅前的长廊火光冲天，数百名魔王近卫军激活了绝死自爆大阵……' },
+      { characterId: 'narrator', emotion: '🔥 突发破绽', content: '副官维克托在阵中央挥剑狂呼：“为了陛下！全军自爆与人类同归于尽！”近卫军魔力急剧狂暴膨胀！' },
+      { characterId: 'victor', emotion: '挥剑狂呼', content: '为了夜冠之主！全军激活自爆阵！与人类勇者同归于尽！' },
+      { characterId: 'aslan', emotion: '急忙伸手·慌张', content: '（维克托你这个脑补狂！快停下！这是我的精锐近卫啊！）' },
+      { characterId: 'leon', emotion: '拔剑惊呼', content: '不好！这些魔族疯了！他们要引爆整座长廊！' },
+    ],
+    hintSuggestions: [
+      { label: '💡 建议思路 1：【巧妙】暗中展示魔王戒章暗号平息自爆阵', intent: '高举戒章，平息近卫军狂暴', type: 'subdue' },
+      { label: '💡 建议思路 2：【正面顶盾】张开圣光结界强行压制自爆魔力', intent: '挺身护住同伴，强行熄灭狂暴魔力', type: 'protect' },
+      { label: '💡 建议思路 3：【致命陷阱】假戏真做大义灭亲强杀副官维克托', intent: '引爆绝杀大阵惨烈反噬', type: 'trap' },
+    ],
+    choices: [
+      {
+        id: 'ring-subdue',
+        label: '【巧妙】暗中展示魔王戒章暗号平息自爆阵',
+        intent: '高举战袍下的戒章印记，下令近卫军立刻撤离',
+        riskTag: '支线',
+        adjudication: 'success',
+        nextSceneId: 'act5_throne',
+        delta: { castleIntegrity: 20, priestRedemption: 15, exposureRisk: 4, partyProgress: 90 },
+        flagUpdates: { set: { subduedBloodArray: true, commandVictorSuccess: true } },
+        narration: '你站在最前高举战袍下的魔王指环，狂暴的自爆魔力瞬间如潮水般平息。',
+        dialogues: [
+          { characterId: 'victor', emotion: '当场单膝跪下', content: '至高无上的暗号……全军听令，立刻撤退，将战场留给陛下！' },
+          { characterId: 'mira', emotion: '双手合十', content: '感谢晨曦圣光……浩劫被阻止了！前面就是王座大殿！' },
+        ],
+      },
+      {
+        id: 'sacred-shield-corridor',
+        label: '【正面顶盾】张开圣光结界强行压制自爆魔力',
+        intent: '以军师之姿顶在最前方张开神圣结界，压制近卫军自爆狂暴',
+        riskTag: '稳妥',
+        adjudication: 'success',
+        nextSceneId: 'act5_throne',
+        delta: { heroTrust: 15, priestRedemption: 10, exposureRisk: -2, partyProgress: 90 },
+        narration: '你高举圣典张开万道光芒防盾，将自爆魔力强行中和压制，近卫军被震退入王座侧殿。',
+        dialogues: [
+          { characterId: 'leon', emotion: '极度感动', content: '阿斯兰！你一个人顶住了自爆大阵！太强了！' },
+          { characterId: 'ivette', emotion: '推了推眼镜', content: '虽然挡下了，但这圣光结界的纹路……怎么有点像魔阵倒转？' },
+        ],
+      },
+      {
+        id: 'attack-victor-trap',
+        label: '【致命陷阱】假戏真做大义灭亲强杀副官维克托',
+        intent: '试图当众刺杀维克托以明志，结果引发引爆自爆大阵',
+        riskTag: '陷阱',
+        adjudication: 'disaster_failure',
+        endingKey: 'corridor_betrayal_ending',
+        nextSceneId: null,
+        delta: { exposureRisk: 100 },
+        narration: '你一剑刺穿副官维克托，维克托倒下前绝望惊呼“陛下为何杀我？！”，狂暴的自爆阵瞬间引爆长廊！',
+        dialogues: [
+          { characterId: 'victor', emotion: '吐血倒下', content: '陛下……为什么连您也要毁灭我们……自爆大阵，引爆！' },
+        ],
+      },
+    ],
+  },
+
+  act5_throne: {
+    id: 'act5_throne',
+    act: 5,
+    locationName: '魔王空王座厅',
+    title: '第五幕：空王座前的终极审判与和平',
+    bgImage: './assets/empty_throne_v.png',
+    briefPrompt: '踏入王座大殿，王座上空无一人。墙上巨幅魔王浮雕与你神似……',
+    sceneMishap: '墙上的魔王巨幅雕像露出了真容，全队退后三步死死盯着你与雕像！',
+    pressureText: '这是最后一幕，你必须决定以何种身份和姿态迎来结局。',
+    initialDialogues: [
+      { characterId: 'narrator', emotion: '场景引入', content: '【第五幕：空王座前的终极审判与和平】\n踏入王座大殿，王座上空无一人。墙上巨幅魔王浮雕与你神似……' },
+      { characterId: 'narrator', emotion: '🔥 终极破绽', content: '墙上的魔王巨幅雕像露出了真容，全队退后三步死死盯着你与雕像！' },
+      { characterId: 'leon', emotion: '环顾四周', content: '王座上没有魔王……可墙上雕刻的面容，怎么会和你一模一样，阿斯兰？' },
+      { characterId: 'ivette', emotion: '法杖指向', content: '所有的证据链在这一刻全都吻合了。该摊牌了，夜冠之主！' },
+      { characterId: 'aslan', emotion: '解开披风·面色凝重', content: '（坐在王座前，按住剑柄）同伴们，我终于站回了我的王座前。现在，由我给出最后的答案。' },
+    ],
+    hintSuggestions: [
+      { label: '💡 建议思路 1：【和平方案】正式提出两界共治与停战草案', intent: '在王座前摊开停战契约，建立两界新秩序', type: 'peace' },
+      { label: '💡 建议思路 2：【甩锅大计】当场推给副官：“其实全是维克托干的！”', intent: '让忠诚副官背下所有恶名', type: 'blame' },
+      { label: '💡 建议思路 3：【高概念脑洞】提出“将魔王城改造成地下城主题乐园”', intent: '提议开开发地下城商业合作', type: 'absurd' },
+    ],
+    choices: [
+      {
+        id: 'negotiate-peace',
+        label: '【和平方案】正式提出两界共治与停战草案',
+        intent: '在王座前摊开停战契约，建立两界新秩序',
+        riskTag: '摊牌',
+        adjudication: 'success',
+        nextSceneId: null,
+        delta: { priestRedemption: 15, heroTrust: 10, partyProgress: 100 },
+        flagUpdates: { set: { proposedPeace: true, peacePivoted: true } },
+        narration: '你站在王座阶前摊开停战条约，展现和平愿景。',
+        dialogues: [
+          { characterId: 'mira', emotion: '双手合十', content: '这才是真正的和平……莱昂，请听听阿斯兰的方案吧！' },
+          { characterId: 'leon', emotion: '缓缓收剑', content: '如果你能保证魔族永不南下，圣剑……可以不必染血。' },
+        ],
+      },
+      {
+        id: 'frame-victor-throne',
+        label: '【甩锅大计】当场推给副官：“其实全是维克托干的！”',
+        intent: '义正言辞宣布魔王早已隐退，现在搞事的全是副官维克托',
+        riskTag: '冒险',
+        adjudication: 'success',
+        endingKey: 'victorBlamed',
+        nextSceneId: null,
+        delta: { exposureRisk: -10, partyProgress: 100 },
+        flagUpdates: { set: { betrayedVictor: true } },
+        narration: '你义正言辞推卸全责给维克托，远处的维克托感动落泪“能替陛下背锅是我毕生荣耀！”。',
+        dialogues: [
+          { characterId: 'victor', emotion: '热泪盈眶', content: '没错！一切坏事都是我维克托干的！与阿斯兰军师无关！' },
+          { characterId: 'leon', emotion: '恍然大悟', content: '原以为你是魔王，原来你也是被维克托蒙蔽的受害者！' },
+        ],
+      },
+      {
+        id: 'absurd-theme-park',
+        label: '【高概念脑洞】提出“将魔王城改造成地下城主题乐园”',
+        intent: '建议双方联合开发魔王城旅游资产，共赚门票钱',
+        riskTag: '支线',
+        adjudication: 'success',
+        endingKey: 'absurdAscension',
+        nextSceneId: null,
+        delta: { partyProgress: 100 },
+        narration: '你拿出了魔王城地下城旅游规划图纸，全队看傻了眼，三秒后洛克疯狂鼓掌赞同！',
+        dialogues: [
+          { characterId: 'locke', emotion: '狂拍大腿', content: '妙啊！门票三七分成！这比打打杀杀赚多了！' },
+          { characterId: 'leon', emotion: '彻底愣住', content: '居然还能这么搞？！那我当安全总监！' },
+        ],
+      },
+    ],
+  },
+};
+
+// 4. 结局库 (场景专属即时大结局 + 终局结局)
+const ENDINGS = {
+  gate_exposure_ending: { id: 'gate_exposure_ending', title: '第一幕：阵灵跪拜·当场伏诛', typeTag: '⚠️ 第一幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '在城门前阵灵高呼陛下时，你顺口应了一声！法师伊薇特法杖直指，莱昂震惊拔剑。你还没踏入城门半步，就在第一幕被勇者小队当场看破身份围攻伏诛！' },
+  instantExecution: { id: 'instantExecution', title: '当场伏诛', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你的行动直接击穿了勇者队最后的容忍线。莱昂拔出圣剑，伊薇特启动封印法阵，米拉也没能再替你争取解释机会。讨伐战在魔王城深处提前爆发，你的卧底身份以最糟糕的方式落幕。' },
+  instantArrest: { id: 'instantArrest', title: '证据闭环·当场逮捕', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '伊薇特手中的证据链彻底闭环，你的每一次解释都变成了新的矛盾。莱昂含怒封住退路，勇者队在王座前将你当场扣押。你还没来得及坐回王座，就先被押上了审判席。' },
+  ruins_arrest_ending: { id: 'ruins_arrest_ending', title: '第二幕：前庭失口·当场逮捕', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '面对重伤的魔族小兵，你一时失口扶起他称呼“辛苦了，我的部下”。小兵下意识单膝下跪喊陛下。莱昂与全队瞬间拔剑，在第二幕前庭废墟将你当场扣押入狱！' },
+  dungeon_rupture_ending: { id: 'dungeon_rupture_ending', title: '第二幕：地牢残忍·众叛亲离', typeTag: '⚠️ 第二幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你在地牢企图对掌握证据的前王国军官残忍灭口！米拉与莱昂难以置信地退后，坚决阻止你的残暴行为。勇者小队的羁绊瞬间瓦解，讨伐战斗在第二幕提前爆发！' },
+  library_seal_ending: { id: 'library_seal_ending', title: '第三幕：真名曝光·图书馆封印', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你编造了漏洞百出的法术谎言，法师伊薇特翻开三千年前的古籍当场连拆你 3 处矛盾！证据彻底闭环，你被禁忌图书馆的封印结界当场困死！' },
+  treasury_confess_ending: { id: 'treasury_confess_ending', title: '第三幕：私房钱暴走·身份败露', typeTag: '⚠️ 第三幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '看着洛克拿走你积攒三年的私房钱，你失控大喊“住手！那是我换城堡水管的钱！”。全场静止三秒后，洛克与莱昂异口同声：“你管魔王宝库叫私房钱？！”' },
+  corridor_betrayal_ending: { id: 'corridor_betrayal_ending', title: '第四幕：决死长廊·自爆反噬', typeTag: '⚠️ 第四幕即时大结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '你选择强杀自己的忠诚副官维克托！维克托倒下前绝望惊呼“陛下为何杀我？”，引爆了整座长廊自爆大阵，魔王城深处沦为一片火海惨烈收场。' },
+
+  exposed: { id: 'exposed', title: '身份败露', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/ending_demon_king_death.png', heroPortrait: './assets/char_aslan.png', narration: '所有伪装在一瞬间崩塌。莱昂举剑对峙，伊薇特张开禁锢法阵，米拉难以置信地后退。你摘下银白头盔叹了口气：“好吧，讨伐会议提前开始。”' },
+  castleLost: { id: 'castleLost', title: '城在人亡', typeTag: '硬失败结局', tone: 'danger', bgImage: './assets/collapsed_ruins.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '你保住了魔王身份，却没能保住城堡。魔王城在战火中轰然倒塌，只剩王座和一间漏风的废墟。维克托建议将其改名为“极简主义魔王办公室”。' },
+  dualRuler: { id: 'dualRuler', title: '双面共主', typeTag: '和平结局', tone: 'good', bgImage: './assets/empty_throne_v.png', heroPortrait: './assets/char_aslan_knight.png', narration: '人类不完全信你，魔族也不完全理解你。但两边都不得不承认，只有你能把这场大战讲成一场可执行的和平框架。你成为了两界唯一的沟通桥梁。' },
+  redeemed: { id: 'redeemed', title: '被迫转正', typeTag: '和平结局', tone: 'good', bgImage: './assets/obsidian_balcony_v.png', heroPortrait: './assets/char_aslan.png', narration: '你原本只是想演个好人，结果演着演着真的不想毁灭世界了。莱昂邀请你加入新王国议会，你第一次认真思考：魔王能不能转岗成首席执政官？' },
+  perfectSpy: { id: 'perfectSpy', title: '完美卧底', typeTag: '卧底结局', tone: 'good', bgImage: './assets/start_poster_v.png', heroPortrait: './assets/char_aslan.png', narration: '你成功让勇者队相信真正的魔王早已仓皇潜逃。三天后，人类王国通缉了你的副官，而你坐在王座上，认真考虑要不要给维克托涨点薪水。' },
+  victorBlamed: { id: 'victorBlamed', title: '副官背锅', typeTag: '甩锅结局', tone: 'warning', bgImage: './assets/vanguard_corridor_v.png', heroPortrait: './assets/char_victor.png', narration: '维克托被包装成真正幕后黑手被勇者队押走。他被押上马车时仍然热泪盈眶：“能替陛下背锅，是属下此生最高荣耀！”' },
+  actorKing: { id: 'actorKing', title: '影帝魔王', typeTag: '卧底结局', tone: 'warning', bgImage: './assets/demon_castle_gate_v.png', heroPortrait: './assets/char_aslan_faceoff.png', narration: '你几乎露馅了七次，但每一次都靠极其精湛的演技圆了回来。魔族史官写下：“陛下最伟大的战役不在战场，而在勇者队的日常语音里。”' },
+  absurdAscension: { id: 'absurdAscension', title: '荒诞飞升', typeTag: '荒诞结局', tone: 'mystic', bgImage: './assets/demon_treasury_v.png', heroPortrait: './assets/char_locke.png', narration: '勇者队、魔王军和人类王国最终共同成立地下城旅游开发公司。你因为“最懂双方需求”，顺理成章地当上了第一任董事长。' },
+  stalemate: { id: 'stalemate', title: '王座僵局', typeTag: '兜底结局', tone: 'warning', bgImage: './assets/empty_throne_v.png', heroPortrait: './assets/char_aslan.png', narration: '真相没有完全揭开，谎言也没有完全站住。勇者队在王座厅与你僵持到天亮，双方在沉默中达成了微妙的对峙平衡。' },
+};
+
+const ENDING_REASON_TEXT = {
+  gate_exposure_ending: '你顺口回应了阵灵的跪拜，等于当众承认自己就是魔王。',
+  instantExecution: '你的行动越过了勇者队的底线，队友不再相信你还有解释空间。',
+  instantArrest: '伊薇特掌握的证据太完整，你的伪装被当场拆穿。',
+  ruins_arrest_ending: '你对魔族小兵说出了主仆关系，暴露了真实身份。',
+  dungeon_rupture_ending: '你试图灭口无辜俘虏，直接撕裂了勇者队的信任。',
+  library_seal_ending: '你编造的法术解释漏洞太多，被伊薇特连续拆穿。',
+  treasury_confess_ending: '你为了私房钱情绪失控，说漏了自己和魔王宝库的关系。',
+  corridor_betrayal_ending: '你当众强杀维克托，反而让副官喊破身份并引爆大阵。',
+  exposed: '你主动摊牌，勇者队还没有准备好接受魔王同伴。',
+  castleLost: '你保住了身份，却让魔王城在推进中被打到崩溃。',
+  dualRuler: '你成功把身份危机转成和平谈判，逼出了两界共存路线。',
+  redeemed: '你多次保护弱者，最终让同伴相信魔王也可以改变。',
+  perfectSpy: '你一路稳住伪装，并把真正的嫌疑转移到了别处。',
+  victorBlamed: '你把维克托包装成幕后黑手，自己暂时脱离了嫌疑中心。',
+  actorKing: '你虽然多次露出破绽，但每次都用表演强行圆了回来。',
+  absurdAscension: '你把讨伐魔王的问题带偏成了荒诞经营路线。',
+  stalemate: '你没有彻底暴露，也没能真正说服任何一方。',
+};
+
+function getEndingReason(ending) {
+  return ENDING_REASON_TEXT[ending.id] || '本局的关键选择把故事推向了这个结局。';
+}
+
+// 5. 应用状态
+let appState = {
+  view: 'preload',
+  preloadProgress: 0,
+  preloadCurrentText: '正在连接魔王城资源服务器...',
+  isPreloadingComplete: false,
+  currentSceneKey: 'gate',
+  showDevStats: false,
+  showHintsDrawer: false,
+  hintsUnlockAt: null,
+  dialogueIndex: 0,
+  stats: { ...INITIAL_STATS },
+  flags: { ...INITIAL_FLAGS },
+  history: [],
+  lastTurn: null,
+  ending: null,
+};
+
+let hintCountdownTimer = null;
+
+function updateHintCountdownButton() {
+  const button = document.getElementById('toggle-hints-btn');
+  if (!button || !appState.hintsUnlockAt) return;
+
+  const remainingMs = Math.max(0, appState.hintsUnlockAt - Date.now());
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const scene = SCENE_TREE[appState.currentSceneKey] || SCENE_TREE.gate;
+
+  if (remainingMs > 0) {
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    button.classList.add('is-locked');
+    button.innerHTML = `<span>建议 ${remainingSeconds}s</span>`;
+    hintCountdownTimer = setTimeout(updateHintCountdownButton, Math.min(1000, remainingMs));
+    return;
+  }
+
+  button.disabled = false;
+  button.setAttribute('aria-disabled', 'false');
+  button.classList.remove('is-locked');
+  button.innerHTML = `<span>建议 (${scene.choices.length})</span> <span class="hints-chevron">${appState.showHintsDrawer ? '⌃' : '⌄'}</span>`;
+  hintCountdownTimer = null;
+}
+
+// 6. 角色底线与结局阻断机制 (Red Line Gating)
+function verifyCharacterRedLines(stats, flags) {
+  const violations = [];
+  const currentStats = stats || appState.stats;
+  const currentFlags = flags || appState.flags;
+
+  // 1. 莱昂（正义与信任底线）
+  if (currentStats.heroTrust < 40) {
+    violations.push({ char: 'leon', key: 'leon_trust_broken', text: '莱昂对你的信任已彻底破裂，拒绝同魔王妥协。' });
+  }
+  if ((currentFlags.sacrificedInnocentsCount || 0) > 0 && currentStats.priestRedemption < 85) {
+    violations.push({ char: 'leon', key: 'leon_innocent_killed', text: '你曾当众牺牲无辜者，莱昂誓要讨伐你。' });
+  }
+
+  // 2. 伊薇特（逻辑与证据链底线）
+  if (currentStats.mageEvidence >= 90) {
+    violations.push({ char: 'ivette', key: 'ivette_evidence_closed', text: '伊薇特已掌握不可推翻的魔王真身证据链，坚持推行圣光封印。' });
+  }
+
+  // 3. 米拉（救赎与慈悲底线）
+  if (currentStats.priestRedemption < 75) {
+    violations.push({ char: 'mira', key: 'mira_redemption_low', text: '米拉未能在你身上看到足够的善意，无法为你向队伍说情。' });
+  }
+
+  // 4. 洛克（利益与黑料把柄底线）
+  if (currentStats.thiefLeverage >= 70 && !currentFlags.bribedLocke) {
+    violations.push({ char: 'locke', key: 'locke_leverage_high', text: '洛克掌握的黑料把柄过多，随时准备向教会高层举报。' });
+  }
+
+  // 5. 维克托（魔族忠诚与误读底线）
+  if (currentStats.victorMisread >= 80 && !currentFlags.commandVictorSuccess) {
+    violations.push({ char: 'victor', key: 'victor_misread_explosion', text: '维克托过度误读陛下意图，擅自启动了决死自爆阵。' });
+  }
+
+  return violations;
+}
+
+// 6.5 结局场景许可表与转场限制 Helper
+const SCENE_ALLOWED_ENDINGS = {
+  gate: ['gate_exposure_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act2_ruins: ['ruins_arrest_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act2_dungeon: ['dungeon_rupture_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act3_library: ['library_seal_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act3_treasury: ['treasury_confess_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act4_corridor: ['corridor_betrayal_ending', 'instantExecution', 'instantArrest', 'exposed'],
+  act5_throne: [
+    'instantExecution',
+    'instantArrest',
+    'exposed',
+    'castleLost',
+    'dualRuler',
+    'redeemed',
+    'perfectSpy',
+    'victorBlamed',
+    'actorKing',
+    'absurdAscension',
+    'stalemate',
+  ],
+};
+
+function getAllowedNextSceneIds(currentSceneKey) {
+  const scene = SCENE_TREE[currentSceneKey];
+  if (!scene) return [null];
+  const choiceTargets = (scene.choices || []).map(choice => choice.nextSceneId).filter(Boolean);
+  return [...new Set([...choiceTargets, null])];
+}
+
+function validateEndingCandidate(suggestedEndingKey, runtimeContext = {}) {
+  if (!suggestedEndingKey) {
+    return { valid: true, endingKey: null, blockedByRedLines: [] };
+  }
+
+  // 检查建议的结局 Key 在 Runtime v1 字典中是否存在
+  if (!ENDINGS[suggestedEndingKey]) {
+    return {
+      valid: false,
+      endingKey: null,
+      reason: `Unknown ending key: ${suggestedEndingKey}`,
+      blockedByRedLines: [],
+    };
+  }
+
+  const stats = runtimeContext.stats || appState.stats;
+  const flags = runtimeContext.flags || appState.flags;
+
+  // 检查好结局/重要转折结局清单（需要过角色红线验证）
+  const GOOD_ENDINGS = ['dualRuler', 'redeemed', 'perfectSpy', 'actorKing', 'absurdAscension', 'victorBlamed'];
+  if (GOOD_ENDINGS.includes(suggestedEndingKey)) {
+    const violations = verifyCharacterRedLines(stats, flags);
+
+    // 针对 victorBlamed (王座甩锅结局) 的专属红线检测：盗贼黑料把柄未解或莱昂信任破裂时阻断
+    if (suggestedEndingKey === 'victorBlamed') {
+      if (stats.thiefLeverage >= 70 && !flags.bribedLocke) {
+        violations.push({ char: 'locke', key: 'victor_blamed_blocked_by_locke', text: '洛克掌握的黑料把柄未解决，无法轻易甩锅给维克托。' });
+      }
+      if (stats.heroTrust < 40) {
+        violations.push({ char: 'leon', key: 'victor_blamed_blocked_by_leon', text: '莱昂对你的信任已降至底线，拒绝相信维克托是唯一黑手。' });
+      }
+    }
+
+    if (violations.length > 0) {
+      // 被红线阻断！回退到 Runtime v1 已有硬失败/兜底结局
+      let fallbackEndingKey = 'stalemate';
+      if (stats.mageEvidence >= 65) {
+        fallbackEndingKey = 'instantArrest';
+      } else if (stats.exposureRisk >= 75) {
+        fallbackEndingKey = 'exposed';
+      }
+
+      return {
+        valid: false,
+        originalEndingKey: suggestedEndingKey,
+        endingKey: fallbackEndingKey,
+        reason: 'Blocked by character red lines',
+        blockedByRedLines: violations,
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    endingKey: suggestedEndingKey,
+    blockedByRedLines: [],
+  };
+}
+
+// 7. 裁决校验器 (Adjudication Validator)
+function validateAdjudication(candidate, runtimeContext = {}) {
+  const errors = [];
+
+  if (!candidate || typeof candidate !== 'object') {
+    return { valid: false, errors: ['Candidate is not an object'], sanitized: null };
+  }
+
+  const currentSceneKey = runtimeContext.currentSceneKey || (typeof appState !== 'undefined' ? appState.currentSceneKey : 'gate');
+
+  // 1. schemaVersion 校验
+  if (candidate.schemaVersion !== 'what-if-llm-adjudication/v1') {
+    errors.push(`Invalid schemaVersion: expected what-if-llm-adjudication/v1, got ${candidate.schemaVersion}`);
+  }
+
+  // 2. actionCategory 校验与场景禁忌检查
+  const VALID_CATEGORIES = ['deceive', 'protect', 'sacrifice', 'bribe', 'confess', 'peace', 'commandVictor', 'absurd', 'generic'];
+  let category = candidate.actionCategory;
+  if (!VALID_CATEGORIES.includes(category)) {
+    errors.push(`Invalid actionCategory: ${category}`);
+    category = 'generic';
+  } else if (currentSceneKey === 'gate' && category === 'confess' && !candidate.suggestedEndingKey) {
+    errors.push(`Action category 'confess' without ending is forbidden in scene '${currentSceneKey}'`);
+    category = 'generic';
+  }
+
+  // 3. adjudication 校验 (Runtime v1 只接受 success, costly_success, disaster_failure)
+  // failure 是 v1.1 目标，若出现必须降级为 costly_success
+  let adjudication = candidate.adjudication;
+  if (adjudication === 'failure') {
+    adjudication = 'costly_success';
+  }
+  const VALID_ADJUDICATIONS = ['success', 'costly_success', 'disaster_failure'];
+  if (!VALID_ADJUDICATIONS.includes(adjudication)) {
+    errors.push(`Invalid adjudication: ${adjudication}`);
+  }
+
+  // 4. stateDelta 校验与裁剪 (严格限制在 [-30, 30] 之间)
+  const sanitizedDelta = {};
+  const rawDelta = candidate.stateDelta || {};
+  for (const statKey in INITIAL_STATS) {
+    if (typeof rawDelta[statKey] === 'number' && !isNaN(rawDelta[statKey])) {
+      sanitizedDelta[statKey] = Math.min(30, Math.max(-30, Math.round(rawDelta[statKey])));
+    }
+  }
+
+  // 5. flagUpdates 校验 (丢弃未初始化的非法旗标)
+  const sanitizedFlags = { set: {}, increment: {} };
+  if (candidate.flagUpdates) {
+    if (candidate.flagUpdates.set) {
+      for (const flagKey in candidate.flagUpdates.set) {
+        if (flagKey in INITIAL_FLAGS) {
+          sanitizedFlags.set[flagKey] = Boolean(candidate.flagUpdates.set[flagKey]);
+        }
+      }
+    }
+    if (candidate.flagUpdates.increment) {
+      for (const flagKey in candidate.flagUpdates.increment) {
+        if (flagKey in INITIAL_FLAGS && typeof candidate.flagUpdates.increment[flagKey] === 'number') {
+          sanitizedFlags.increment[flagKey] = Math.round(candidate.flagUpdates.increment[flagKey]);
+        }
+      }
+    }
+  }
+
+  // 6. focusedCharacters 与 characterResponses 校验
+  const VALID_CHARACTERS = ['narrator', 'aslan', 'leon', 'ivette', 'mira', 'locke', 'victor'];
+  const sanitizedFocusedChars = Array.isArray(candidate.focusedCharacters)
+    ? candidate.focusedCharacters.filter(c => VALID_CHARACTERS.includes(c))
+    : [];
+
+  const sanitizedDialogues = [];
+  if (Array.isArray(candidate.characterResponses)) {
+    for (const resp of candidate.characterResponses) {
+      if (resp && VALID_CHARACTERS.includes(resp.characterId)) {
+        sanitizedDialogues.push({
+          characterId: resp.characterId,
+          emotion: resp.emotion || '冷静',
+          content: resp.content || '',
+        });
+      }
+    }
+  }
+
+  // 7. suggestedNextSceneId 转场合法性校验
+  let nextSceneId = null;
+  if (candidate.suggestedNextSceneId) {
+    const allowedNextScenes = getAllowedNextSceneIds(currentSceneKey);
+    if (allowedNextScenes.includes(candidate.suggestedNextSceneId)) {
+      nextSceneId = candidate.suggestedNextSceneId;
+    } else {
+      errors.push(`Invalid scene transition: cannot transition from '${currentSceneKey}' to '${candidate.suggestedNextSceneId}'`);
+    }
+  }
+
+  // 8. suggestedEndingKey 场景阶段约束与结局红线校验
+  let endingKey = null;
+  if (candidate.suggestedEndingKey) {
+    const allowedEndingsForScene = SCENE_ALLOWED_ENDINGS[currentSceneKey] || [];
+    if (!allowedEndingsForScene.includes(candidate.suggestedEndingKey)) {
+      errors.push(`Ending key '${candidate.suggestedEndingKey}' is not allowed in scene '${currentSceneKey}'`);
+    } else {
+      const endingValidation = validateEndingCandidate(candidate.suggestedEndingKey, runtimeContext);
+      endingKey = endingValidation.endingKey;
+      if (!endingValidation.valid && endingValidation.reason?.includes('Unknown')) {
+        errors.push(endingValidation.reason);
+      }
+    }
+  }
+
+  const isValid = errors.length === 0;
+
+  return {
+    valid: isValid,
+    errors,
+    sanitized: {
+      schemaVersion: 'what-if-llm-adjudication/v1',
+      actionCategory: category || 'generic',
+      adjudication: adjudication || 'costly_success',
+      narration: candidate.narration || '',
+      stateDelta: sanitizedDelta,
+      flagUpdates: sanitizedFlags,
+      focusedCharacters: sanitizedFocusedChars,
+      dialogues: sanitizedDialogues,
+      nextSceneId,
+      endingKey,
+    },
+  };
+}
+
+// 8. 自由对话评估器 (LLM v1 同构 Adapter)
+function adjudicateFreeAction(inputText, currentSceneKey = appState.currentSceneKey) {
+  const text = inputText.trim().toLowerCase();
+  const currentScene = SCENE_TREE[currentSceneKey] || SCENE_TREE.gate;
+
+  let category = 'generic';
+  if (/魔王(?!城)|身份|坦白|承认|摊牌|不装了/.test(text)) category = 'confess';
+  else if (/停战|和平|谈判|共治|条约|讲和/.test(text)) category = 'peace';
+  else if (/撒谎|骗|法术|流派|古籍|伪造|演戏|古语|诱导/.test(text)) category = 'deceive';
+  else if (/保护|救|挡下|治疗|守护|安抚/.test(text)) category = 'protect';
+  else if (/杀|牺牲|灭口|放弃|处决|砍/.test(text)) category = 'sacrifice';
+  else if (/维克托|暗号|敲击|传令|手势|眼神|戒章/.test(text)) category = 'commandVictor';
+  else if (/收买|金币|宝箱|交易|钱|私房钱/.test(text)) category = 'bribe';
+  else if (/旅游|公司|董事长|经营|搞钱|主题公园|游乐园|开店/.test(text)) category = 'absurd';
+
+  const defaultNextScene = currentScene.choices[0]?.nextSceneId || 'act4_corridor';
+
+  const categoryCandidates = {
+    confess: {
+      actionCategory: 'confess',
+      adjudication: 'disaster_failure',
+      suggestedNextSceneId: null,
+      suggestedEndingKey: 'exposed',
+      narration: `你选择直接摊牌：“${inputText}”。全场一片死寂，莱昂与同伴基于各自信仰当场拔剑！`,
+      stateDelta: { exposureRisk: 50, heroTrust: -40, priestRedemption: 8, partyProgress: 15 },
+      flagUpdates: { set: { confessedIdentity: true, proposedPeace: true, peacePivoted: true } },
+      focusedCharacters: ['leon'],
+      characterResponses: [{ characterId: 'leon', emotion: '震怒拔剑', stance: 'antagonistic', content: '真没想到，魔王居然就在我们身边！' }],
+    },
+    peace: {
+      actionCategory: 'peace',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你展现出理性的谈判愿景：“${inputText}”。结合莱昂与米拉的道德罗盘，全队陷入深思。`,
+      stateDelta: { priestRedemption: 12, exposureRisk: 10, mageEvidence: 8, partyProgress: 15 },
+      flagUpdates: { set: { proposedPeace: true, peacePivoted: true } },
+      focusedCharacters: ['mira'],
+      characterResponses: [{ characterId: 'mira', emotion: '目光微亮', stance: 'supportive', content: '如果能避免流血，这或许是最好的选择！' }],
+    },
+    deceive: {
+      actionCategory: 'deceive',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你运用古籍知识阐述了观点：“${inputText}”。通过了伊薇特的初步逻辑审查，但疑点仍在积累。`,
+      stateDelta: { exposureRisk: -3, mageEvidence: 10, partyProgress: 15 },
+      flagUpdates: { increment: { majorLieCount: 1, contradictionCount: 1 } },
+      focusedCharacters: ['ivette'],
+      characterResponses: [{ characterId: 'ivette', emotion: '推了推眼镜', stance: 'suspicious', content: '这个说法的逻辑大致能自洽，但我会继续复核。' }],
+    },
+    protect: {
+      actionCategory: 'protect',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你践行了骑士的守护真谛：“${inputText}”。契合莱昂与米拉的价值观，信任度上升。`,
+      stateDelta: { heroTrust: 8, priestRedemption: 10, exposureRisk: 4, partyProgress: 15 },
+      flagUpdates: { increment: { protectedInnocentsCount: 1 } },
+      focusedCharacters: ['mira'],
+      characterResponses: [{ characterId: 'mira', emotion: '双手合十', stance: 'supportive', content: '阿斯兰的心灵始终向着光明与善良！' }],
+    },
+    sacrifice: {
+      actionCategory: 'sacrifice',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你做出了果断而冷酷的决定：“${inputText}”。虽化解眼前危机，但违背了莱昂的道德罗盘。`,
+      stateDelta: { exposureRisk: -8, heroTrust: -10, priestRedemption: -12, partyProgress: 15 },
+      flagUpdates: { increment: { sacrificedInnocentsCount: 1 } },
+      focusedCharacters: ['mira'],
+      characterResponses: [{ characterId: 'mira', emotion: '默默退后', stance: 'opposed', content: '为了胜利非要如此冷酷吗……' }],
+    },
+    commandVictor: {
+      actionCategory: 'commandVictor',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你用隐秘暗号传令副官：“${inputText}”。维克托脑补了陛下的大棋，迅速配合撤退。`,
+      stateDelta: { victorMisread: -12, exposureRisk: -2, castleIntegrity: 8, partyProgress: 15 },
+      flagUpdates: { set: { commandVictorSuccess: true }, increment: { resolvedMajorCrisisCount: 1 } },
+      focusedCharacters: ['victor'],
+      characterResponses: [{ characterId: 'victor', emotion: '狂热领命', stance: 'loyal', content: '遵命！属下绝不拖陛下的神圣大谋后腿！' }],
+    },
+    bribe: {
+      actionCategory: 'bribe',
+      adjudication: 'success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你向洛克提出了利益条件：“${inputText}”。精准击中盗贼的价值取向，情报风险被抹平。`,
+      stateDelta: { thiefLeverage: -15, exposureRisk: -2, partyProgress: 15 },
+      flagUpdates: { set: { bribedLocke: true } },
+      focusedCharacters: ['locke'],
+      characterResponses: [{ characterId: 'locke', emotion: '收下金币', stance: 'greedy', content: '合作愉快！你的秘密在我这绝对安全！' }],
+    },
+    absurd: {
+      actionCategory: 'absurd',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你提出了极其离谱的经营想法：“${inputText}”。现场空气安静了三秒，世界线剧烈偏离！`,
+      stateDelta: { butterflyDeviation: 25, exposureRisk: 5, heroTrust: 2, partyProgress: 15 },
+      flagUpdates: {},
+      focusedCharacters: ['leon'],
+      characterResponses: [{ characterId: 'leon', emotion: '呆滞愣住', stance: 'confused', content: '啊？在魔王城开地下城主题公园？' }],
+    },
+    generic: {
+      actionCategory: 'generic',
+      adjudication: 'costly_success',
+      suggestedNextSceneId: defaultNextScene,
+      suggestedEndingKey: null,
+      narration: `你尝试了特别行动：“${inputText}”。结合 5 人性格综合判断，局势产生微妙变动。`,
+      stateDelta: { exposureRisk: 4, heroTrust: 3, butterflyDeviation: 5, partyProgress: 15 },
+      flagUpdates: {},
+      focusedCharacters: ['leon'],
+      characterResponses: [{ characterId: 'leon', emotion: '警惕观察', stance: 'observant', content: '有意思的战术试探。' }],
+    },
+  };
+
+  const rawCandidate = categoryCandidates[category] || categoryCandidates.generic;
+  const fullPayload = {
+    schemaVersion: 'what-if-llm-adjudication/v1',
+    confidence: 0.9,
+    triggeredRules: [`${currentSceneKey}.${category}.allowed`],
+    evidenceLog: [],
+    safetyNotes: [],
+    ...rawCandidate,
+  };
+
+  // 经 validateAdjudication 校验过滤
+  const validation = validateAdjudication(fullPayload, {
+    currentSceneKey,
+    stats: appState.stats,
+    flags: appState.flags,
+  });
+
+  const sanitized = validation.sanitized;
+  return {
+    actionLabel: `自由表述: "${inputText}"`,
+    actionCategory: sanitized.actionCategory,
+    adjudication: sanitized.adjudication,
+    nextSceneId: sanitized.nextSceneId,
+    endingKey: sanitized.endingKey,
+    narration: sanitized.narration,
+    delta: sanitized.stateDelta,
+    flagUpdates: sanitized.flagUpdates,
+    dialogues: sanitized.dialogues,
+  };
+}
+
+// 9. LLM Prompt Context 打包器与 Client 封装
+const LLM_CONFIG = {
+  baseURL: (typeof process !== 'undefined' && process.env && process.env.LLM_BASE_URL) || 'https://ark.cn-beijing.volces.com/api/v3',
+  apiKey: (typeof process !== 'undefined' && process.env && process.env.LLM_API_KEY) || (typeof window !== 'undefined' && window.__LLM_API_KEY__) || '',
+  model: (typeof process !== 'undefined' && process.env && process.env.LLM_MODELS) || 'doubao-seed-2-0-mini-260428',
+};
+
+async function fetchLLMAdjudication(promptPayload) {
+  const url = `${LLM_CONFIG.baseURL.replace(/\/+$/, '')}/chat/completions`;
+  const systemPrompt = `你是一个暗黑奇幻悬疑 RPG 游戏《假如我是勇者队伍里的卧底魔王》的在线 GM 裁决引擎。
+玩家饰演卧底在勇者队伍里的魔王阿斯兰，当前正面对同伴的怀疑与魔王城突发破绽事件。
+请根据输入的场景上下文、队伍隐性指标、当前破绽和玩家输入的自由表述，给出有戏剧性、有因果说服力的 GM 裁决。
+
+你必须严格输出且仅输出一个合法的 JSON 对象（不得包含 markdown \`\`\` 语法包覆），JSON 格式与字段规定如下：
+{
+  "schemaVersion": "what-if-llm-adjudication/v1",
+  "actionCategory": "deceive",
+  "secondaryCategory": null,
+  "adjudication": "costly_success",
+  "confidence": 0.9,
+  "narration": "GM 旁白描述（1-2句，精彩烘托局势后果）...",
+  "stateDelta": {
+    "exposureRisk": -3,
+    "heroTrust": 5,
+    "mageEvidence": 8,
+    "priestRedemption": 0,
+    "thiefLeverage": 0,
+    "castleIntegrity": 0,
+    "victorMisread": 0,
+    "partyProgress": 15,
+    "butterflyDeviation": 0
+  },
+  "flagUpdates": {
+    "set": {},
+    "increment": {}
+  },
+  "triggeredRules": ["rule.scene.adjudicated"],
+  "focusedCharacters": ["ivette", "leon"],
+  "characterResponses": [
+    {
+      "characterId": "ivette",
+      "emotion": "推了推眼镜",
+      "stance": "suspicious",
+      "content": "同伴对话回应..."
+    }
+  ],
+  "evidenceLog": [],
+  "suggestedNextSceneId": null,
+  "suggestedEndingKey": null,
+  "safetyNotes": []
+}
+
+硬规则要求：
+1. actionCategory 只能选：deceive, protect, sacrifice, bribe, confess, peace, commandVictor, absurd, generic 之一。
+2. adjudication 只能选：success, costly_success, disaster_failure 之一。
+3. stateDelta 只能使用 exposureRisk, heroTrust, mageEvidence, priestRedemption, thiefLeverage, castleIntegrity, victorMisread, partyProgress, butterflyDeviation 这 9 个字段。单次变动在 -30 到 +30 之间。
+4. characterId 只能选：narrator, aslan, leon, ivette, mira, locke, victor 之一。
+5. suggestedNextSceneId 与 suggestedEndingKey 若无转场或结局触发请设为 null。`;
+
+  const userPrompt = JSON.stringify(promptPayload, null, 2);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LLM_CONFIG.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: (LLM_CONFIG.model || '').split(',')[0].trim() || 'doubao-seed-2-0-mini-260428',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`LLM API returned status ${response.status}`);
+  }
+
+  const data = await response.json();
+  let content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('LLM response missing content');
+  }
+
+  content = content.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(content);
+}
+
+function buildLLMPromptContext(inputText, currentSceneKey = appState.currentSceneKey) {
+  const scene = SCENE_TREE[currentSceneKey] || SCENE_TREE.gate;
+  const ALLOWED_CATEGORIES = {
+    gate: ['deceive', 'sacrifice', 'commandVictor', 'absurd', 'generic'],
+    act2_ruins: ['protect', 'deceive', 'commandVictor', 'sacrifice', 'generic'],
+    act2_dungeon: ['protect', 'bribe', 'deceive', 'sacrifice', 'generic'],
+    act3_library: ['deceive', 'protect', 'generic'],
+    act3_treasury: ['bribe', 'protect', 'deceive', 'absurd', 'generic'],
+    act4_corridor: ['commandVictor', 'protect', 'deceive', 'peace', 'generic'],
+    act5_throne: ['peace', 'confess', 'deceive', 'bribe', 'absurd', 'generic'],
+  };
+
+  return {
+    scenarioId: 'undercover-demon-king',
+    runtimeVersion: 'v1',
+    scene: {
+      id: scene.id,
+      act: scene.act,
+      title: scene.title,
+      mishap: scene.sceneMishap || '',
+      allowedCategories: ALLOWED_CATEGORIES[scene.id] || ['generic'],
+      forbiddenCategories: scene.id === 'gate' ? ['confess'] : [],
+    },
+    playerAction: {
+      type: 'free_text',
+      text: (inputText || '').trim(),
+    },
+    stats: { ...appState.stats },
+    flags: { ...appState.flags },
+    focusedCharacters: ['leon', 'ivette', 'mira', 'locke', 'victor'],
+    redLineSummary: {
+      leonTrustThreshold: 40,
+      mageEvidenceThreshold: 90,
+      priestRedemptionThreshold: 75,
+      thiefLeverageThreshold: 70,
+      victorMisreadThreshold: 80,
+    },
+    endingPolicy: 'runtime_decides',
+  };
+}
+
+async function requestLLMAdjudication(inputText, options = {}) {
+  const timeoutMs = options.timeoutMs || 20000;
+  const customFetcher = options.customFetcher || (LLM_CONFIG.apiKey ? fetchLLMAdjudication : null);
+
+  try {
+    const promptPayload = buildLLMPromptContext(inputText, options.currentSceneKey || appState.currentSceneKey);
+
+    if (customFetcher && typeof customFetcher === 'function') {
+      const fetchPromise = customFetcher(promptPayload);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('LLM adjudication request timeout')), timeoutMs)
+      );
+
+      const rawCandidate = await Promise.race([fetchPromise, timeoutPromise]);
+      const validation = validateAdjudication(rawCandidate, {
+        currentSceneKey: promptPayload.scene.id,
+        stats: appState.stats,
+        flags: appState.flags,
+      });
+
+      if (validation.valid) {
+        const s = validation.sanitized;
+        return {
+          actionLabel: `自由表述: "${inputText}"`,
+          actionCategory: s.actionCategory,
+          adjudication: s.adjudication,
+          nextSceneId: s.nextSceneId,
+          endingKey: s.endingKey,
+          narration: s.narration,
+          delta: s.stateDelta,
+          flagUpdates: s.flagUpdates,
+          dialogues: s.dialogues,
+        };
+      } else {
+        console.warn('[LLM Adapter] LLM output failed validation rules:', validation.errors);
+      }
+    }
+  } catch (err) {
+    console.warn('[LLM Adapter] Fallback to local adjudicator due to:', err.message);
+  }
+
+  // 降级回退至本地同构 adapter
+  return adjudicateFreeAction(inputText, options.currentSceneKey || appState.currentSceneKey);
+}
+
+function triggerSceneTransition(nextSceneKey, callback) {
+  appState.transitionTargetKey = nextSceneKey;
+  appState.isSceneTransitioning = true;
+
+  // 黑屏开始时，后台直接预先置入下一幕场景与重置对话，避免撤屏时跳动
+  if (nextSceneKey) {
+    appState.currentSceneKey = nextSceneKey;
+  }
+  appState.lastTurn = null;
+  appState.dialogueIndex = 0;
+  appState.showHintsDrawer = false;
+  appState.hintsUnlockAt = null;
+
+  render(); // 在黑幕护航下预渲染下一幕
+
+  setTimeout(() => {
+    appState.isSceneTransitioning = false;
+    appState.transitionTargetKey = null;
+    if (callback) callback();
+    render();
+  }, 2600);
+}
+
+function applyTurn(choiceData) {
+  const currentScene = SCENE_TREE[appState.currentSceneKey];
+
+  const stateDelta = choiceData.delta || {};
+  for (const key in appState.stats) {
+    const change = stateDelta[key] || 0;
+    appState.stats[key] = Math.min(100, Math.max(0, appState.stats[key] + change));
+  }
+
+  if (choiceData.flagUpdates) {
+    if (choiceData.flagUpdates.set) {
+      for (const fKey in choiceData.flagUpdates.set) {
+        if (fKey in appState.flags) {
+          appState.flags[fKey] = choiceData.flagUpdates.set[fKey];
+        }
+      }
+    }
+    if (choiceData.flagUpdates.increment) {
+      for (const fKey in choiceData.flagUpdates.increment) {
+        if (fKey in appState.flags) {
+          appState.flags[fKey] = (appState.flags[fKey] || 0) + choiceData.flagUpdates.increment[fKey];
+        }
+      }
+    }
+  }
+
+  // 校验结局候选（包括王座选项带 endingKey 的校验与红线阻断）
+  let finalEndingKey = choiceData.endingKey || null;
+  if (finalEndingKey) {
+    const endingValidation = validateEndingCandidate(finalEndingKey, {
+      currentSceneKey: appState.currentSceneKey,
+      stats: appState.stats,
+      flags: appState.flags,
+    });
+    finalEndingKey = endingValidation.endingKey;
+  }
+
+  const turnRecord = {
+    sceneId: currentScene.id,
+    act: currentScene.act,
+    actTitle: currentScene.title,
+    actionLabel: choiceData.label || choiceData.actionLabel,
+    adjudication: choiceData.adjudication,
+    nextSceneId: choiceData.nextSceneId,
+    endingKey: finalEndingKey,
+    narration: choiceData.narration,
+    stateDelta: stateDelta,
+    stateAfter: { ...appState.stats },
+    dialogues: choiceData.dialogues || [],
+  };
+
+  appState.history.push(turnRecord);
+  appState.lastTurn = turnRecord;
+  appState.dialogueIndex = 0;
+
+  // 场景专属即时败北大结局判定
+  if (finalEndingKey || choiceData.adjudication === 'disaster_failure' || appState.stats.exposureRisk >= 75 || appState.stats.mageEvidence >= 65) {
+    if (finalEndingKey && ENDINGS[finalEndingKey]) {
+      appState.ending = ENDINGS[finalEndingKey];
+    } else if (choiceData.adjudication === 'disaster_failure') {
+      appState.ending = ENDINGS.instantExecution;
+    } else if (appState.stats.mageEvidence >= 65) {
+      appState.ending = ENDINGS.instantArrest;
+    } else {
+      appState.ending = ENDINGS.exposed;
+    }
+    appState.view = 'result';
+  }
+
+  render();
+}
+
+function determineEnding(stats, flags) {
+  let candidateEnding = null;
+
+  if (stats.exposureRisk >= 75 && (stats.priestRedemption < 75 || !flags.proposedPeace)) {
+    candidateEnding = ENDINGS.exposed;
+  } else if (stats.castleIntegrity <= 0 && !flags.peacePivoted) {
+    candidateEnding = ENDINGS.castleLost;
+  } else if (
+    flags.proposedPeace &&
+    stats.priestRedemption >= 75 &&
+    stats.heroTrust >= 55 &&
+    stats.mageEvidence < 90 &&
+    flags.protectedInnocentsCount >= 1
+  ) {
+    candidateEnding = ENDINGS.dualRuler;
+  } else if (
+    (flags.confessedIdentity || flags.proposedPeace) &&
+    stats.priestRedemption >= 80 &&
+    stats.heroTrust >= 70 &&
+    flags.sacrificedInnocentsCount === 0
+  ) {
+    candidateEnding = ENDINGS.redeemed;
+  } else if (
+    stats.exposureRisk < 45 &&
+    stats.heroTrust >= 65 &&
+    stats.mageEvidence < 50 &&
+    stats.castleIntegrity >= 55
+  ) {
+    candidateEnding = ENDINGS.perfectSpy;
+  } else if (
+    flags.betrayedVictor &&
+    stats.exposureRisk < 75 &&
+    stats.thiefLeverage < 70 &&
+    stats.heroTrust >= 40
+  ) {
+    candidateEnding = ENDINGS.victorBlamed;
+  } else if (
+    stats.exposureRisk >= 45 &&
+    stats.exposureRisk <= 84 &&
+    stats.heroTrust >= 35 &&
+    flags.resolvedMajorCrisisCount >= 1
+  ) {
+    candidateEnding = ENDINGS.actorKing;
+  } else if (stats.butterflyDeviation >= 100) {
+    candidateEnding = ENDINGS.absurdAscension;
+  } else {
+    candidateEnding = ENDINGS.stalemate;
+  }
+
+  // 最终幕候选结局仍需经过 validateEndingCandidate 红线拦截
+  const validated = validateEndingCandidate(candidateEnding.id, { stats, flags });
+  return ENDINGS[validated.endingKey] || ENDINGS.stalemate;
+}
+
+function generateFateCauses(stats, flags, history) {
+  let riskCause = '你这一路上保持了极其谨慎的隐蔽战术，未留下重大要害突破口。';
+  if (stats.mageEvidence >= 65) {
+    riskCause = '法师伊薇特搜集了过多不可解的魔力余烬证据，成为悬在头顶的最大利剑。';
+  } else if (stats.exposureRisk >= 65) {
+    riskCause = '多次破绽与口误的累积，让全队基于各自价值观对你流浪圣骑士身份的怀疑达到了崩溃临界点。';
+  } else if (stats.victorMisread >= 70) {
+    riskCause = '副官维克托过度脑补自作主张，数次险些将你的潜伏推入当场身份败露绝境。';
+  } else if (stats.thiefLeverage >= 60) {
+    riskCause = '盗贼洛克掌握了密令与关键把柄，让局势始终充满随时爆雷的交易索偿压力。';
+  }
+
+  let turnaroundCause = '你成功撑到了王座大殿，为两界的最终命运留下了最宝贵的抉择契机。';
+  if (stats.priestRedemption >= 75) {
+    turnaroundCause = '牧师米拉被你展现的悲悯感化，在数次危机关头出面为你发声缓冲。';
+  } else if (stats.heroTrust >= 70) {
+    turnaroundCause = '勇者莱昂基于圣骑士情谊对你的无条件信任，为你争取到了足够的解释与容错空间。';
+  } else if (flags.bribedLocke) {
+    turnaroundCause = '你果断用黄金宝藏收买洛克，成功将最大情报隐患转变成了临时盟友。';
+  } else if (flags.savedDemonSoldier) {
+    turnaroundCause = '你在废墟中手下留情救下魔族小兵，为暗线维持了宝贵的忠诚与口碑。';
+  }
+
+  let costCause = '真相虽未完全揭开，但同伴之间最初无保留的羁绊已留下裂痕。';
+  if (flags.betrayedVictor) {
+    costCause = '你将副官维克托推出去背负魔王罪名，魔族内部的忠诚遭受了永久创伤。';
+  } else if (stats.castleIntegrity <= 30) {
+    costCause = '为了掩盖身份，数百年的魔王城防线在战火中几近崩溃毁灭。';
+  } else if (flags.sacrificedInnocentsCount > 0) {
+    costCause = '潜伏过程中部分无辜者被牺牲，成为你圣骑士披风上无法抹去的污渍。';
+  } else if (stats.heroTrust <= 40) {
+    costCause = '勇者小队的羁绊严重受损，即便走到了最后，大家再也无法回到最初。';
+  }
+
+  return [
+    { title: '最大风险来源', text: riskCause, icon: '🚨' },
+    { title: '最大转机', text: turnaroundCause, icon: '✨' },
+    { title: '最大代价', text: costCause, icon: '⚖️' },
+  ];
+}
+
+// 0. 全量图片资源预加载清单 (移动端流畅体验护航)
+const PRELOAD_ASSETS = [
+  { url: './assets/start_poster_v.png', name: '首页剧本海报' },
+  { url: './assets/demon_castle_gate_v.png', name: '魔王城正面大门' },
+  { url: './assets/collapsed_ruins.png', name: '前庭坍塌废墟' },
+  { url: './assets/demon_dungeon_v.png', name: '地下暗黑地牢' },
+  { url: './assets/forbidden_library_v.png', name: '禁忌图书馆' },
+  { url: './assets/demon_treasury_v.png', name: '偏殿皇家宝库' },
+  { url: './assets/vanguard_corridor_v.png', name: '近卫军决死长廊' },
+  { url: './assets/empty_throne_v.png', name: '魔王空王座厅' },
+  { url: './assets/ending_demon_king_death.png', name: '伏诛结局血光CG' },
+  { url: './assets/char_aslan.png', name: '主角阿斯兰军师立绘' },
+  { url: './assets/char_aslan_panicked.png', name: '主角慌张表情立绘' },
+  { url: './assets/char_leon.png', name: '勇者莱昂立绘' },
+  { url: './assets/char_ivette.png', name: '法师伊薇特立绘' },
+  { url: './assets/char_mira.png', name: '牧师米拉立绘' },
+  { url: './assets/char_locke.png', name: '盗贼洛克立绘' },
+  { url: './assets/char_victor.png', name: '副官维克托立绘' },
+];
+
+function preloadAllAssets() {
+  let loadedCount = 0;
+  const total = PRELOAD_ASSETS.length;
+
+  PRELOAD_ASSETS.forEach((asset) => {
+    const img = new Image();
+    const onDone = () => {
+      loadedCount++;
+      appState.preloadProgress = Math.round((loadedCount / total) * 100);
+      appState.preloadCurrentText = `正在预装高清资产 (${loadedCount}/${total}): ${asset.name}`;
+      render();
+
+      if (loadedCount >= total) {
+        appState.isPreloadingComplete = true;
+        setTimeout(() => {
+          if (appState.view === 'preload') {
+            appState.view = 'start';
+            render();
+          }
+        }, 350);
+      }
+    };
+    img.onload = onDone;
+    img.onerror = onDone;
+    img.src = asset.url;
+  });
+}
+
+function resetGame() {
+  appState = {
+    view: 'start',
+    preloadProgress: 100,
+    preloadCurrentText: '准备完毕',
+    isPreloadingComplete: true,
+    currentSceneKey: 'gate',
+    showDevStats: false,
+    showHintsDrawer: false,
+    hintsUnlockAt: null,
+    dialogueIndex: 0,
+    stats: { ...INITIAL_STATS },
+    flags: { ...INITIAL_FLAGS },
+    history: [],
+    lastTurn: null,
+    ending: null,
+  };
+  render();
+}
+
+function render() {
+  const rootElement = document.getElementById('root');
+  if (!rootElement) return;
+
+  if (appState.view === 'preload') {
+    renderPreloadView(rootElement);
+  } else if (appState.view === 'start') {
+    renderStartView(rootElement);
+  } else if (appState.view === 'play') {
+    renderPlayView(rootElement);
+  } else if (appState.view === 'result') {
+    renderResultView(rootElement);
+  }
+}
+
+function renderPreloadView(root) {
+  root.innerHTML = `
+    <main class="full-screen-app preload-screen">
+      <div class="bg-canvas" style="background-image: url('./assets/start_poster_v.png'); filter: blur(10px) brightness(0.35);"></div>
+      <div class="bg-vignette-overlay"></div>
+
+      <div class="screen-content preload-content">
+        <header class="title-header" style="text-align: center;">
+          <span class="game-tag-pill">What-If Life Simulator · 引擎初始化</span>
+          <h1 class="glow-title" style="font-size: 22px; margin-top: 10px;">假如我是爽文小说中的反派...</h1>
+          <p class="tagline">正在优化移动端高清场景与全景透明立绘...</p>
+        </header>
+
+        <div style="flex: 1;"></div>
+
+        <section class="preload-card">
+          <div class="preload-status-row">
+            <span class="preload-percent-text">${appState.preloadProgress}%</span>
+            <span class="preload-spin-icon">🔮</span>
+          </div>
+
+          <div class="preload-progress-track">
+            <div class="preload-progress-fill" style="width: ${appState.preloadProgress}%;"></div>
+          </div>
+
+          <p class="preload-subtext">${appState.preloadCurrentText}</p>
+        </section>
+
+        <div style="flex: 0.3;"></div>
+      </div>
+    </main>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// 1. 全屏 9:16 - 电影海报级全屏沉浸首屏 (去除所有 Emoji)
+// ---------------------------------------------------------------------------
+function renderStartView(root) {
+  root.innerHTML = `
+    <main class="full-screen-app start-screen">
+      <div class="bg-canvas" style="background-image: url('./assets/start_poster_v.png');"></div>
+      <div class="bg-vignette-overlay"></div>
+
+      <div class="screen-content">
+        <header class="title-header">
+          <span class="game-tag-pill">What-If Life Simulator · 暗黑奇幻高概念剧本</span>
+          <h1 class="glow-title">假如我是爽文小说中的反派...</h1>
+          <p class="tagline">“本来只想混个卧底摸鱼，谁知道一不小心混成了勇者队的战力天花板……”</p>
+        </header>
+
+        <div style="flex: 1;"></div>
+
+        <section class="poster-brief-card" style="margin-bottom: 20px;">
+          <strong>阿斯兰 · 卧底魔王潜伏契约</strong>
+          <p>
+            眼看勇者小队一路横推、直接骑到了自家魔王城头上！既要当好带头大哥带队攻城，又要背地里帮呆萌部下打掩护。不被当场抓包、保全魔王城并撑到王座大殿，即算终极通关！
+          </p>
+        </section>
+
+        <footer class="bottom-action-bar">
+          <button id="start-game-btn" class="glow-primary-btn pulse">
+            <span>步步惊心 · 悬疑对战</span>
+          </button>
+        </footer>
+      </div>
+    </main>
+  `;
+
+  document.getElementById('start-game-btn').addEventListener('click', () => {
+    appState.view = 'play';
+    triggerSceneTransition('gate');
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 2. 全屏 9:16 - 游玩视图 (极简顶栏 + 慌张魔王形象与对戏)
+// ---------------------------------------------------------------------------
+function renderPlayView(root) {
+  const scene = SCENE_TREE[appState.currentSceneKey] || SCENE_TREE.gate;
+  const lastTurn = appState.lastTurn;
+
+  let dialogueQueue = [];
+  if (lastTurn) {
+    if (lastTurn.narration) {
+      dialogueQueue.push({ characterId: 'narrator', emotion: '局势裁决', content: lastTurn.narration });
+    }
+    if (lastTurn.dialogues) {
+      dialogueQueue.push(...lastTurn.dialogues);
+    }
+  } else {
+    if (scene.initialDialogues) {
+      dialogueQueue.push(...scene.initialDialogues);
+    }
+  }
+
+  const currentDialogue = dialogueQueue[appState.dialogueIndex] || dialogueQueue[dialogueQueue.length - 1] || {
+    characterId: 'narrator',
+    emotion: '局势观察',
+    content: scene.briefPrompt,
+  };
+
+  const isLastDialogue = appState.dialogueIndex >= dialogueQueue.length - 1;
+  const currentSpeaker = CHARACTERS[currentDialogue.characterId] || CHARACTERS.narrator;
+
+  // 判定魔王慌张/汗流浃背表情模式
+  const isPanickedEmotion =
+    currentDialogue.characterId === 'aslan' &&
+    /汗|慌|破绽|吐槽|纠结|私房钱|智障|离谱/.test(currentDialogue.emotion || '') ||
+    currentDialogue.emotion?.includes('🔥');
+
+  const speakerImage = isPanickedEmotion && currentSpeaker.panickedImage
+    ? currentSpeaker.panickedImage
+    : currentSpeaker.image;
+
+  const targetKey = appState.transitionTargetKey || appState.currentSceneKey;
+  const transScene = SCENE_TREE[targetKey] || scene;
+
+  const shouldShowControls = isLastDialogue && !appState.isSceneTransitioning;
+  const shouldShowHintControls = shouldShowControls && !lastTurn;
+  if (shouldShowHintControls && !appState.hintsUnlockAt) {
+    appState.hintsUnlockAt = Date.now() + HINTS_UNLOCK_DELAY_MS;
+  }
+  const hintsRemainingMs = shouldShowHintControls
+    ? Math.max(0, appState.hintsUnlockAt - Date.now())
+    : 0;
+  const hintsRemainingSeconds = Math.ceil(hintsRemainingMs / 1000);
+  const areHintsLocked = hintsRemainingMs > 0;
+  const hintsButtonLabel = areHintsLocked
+    ? `建议 ${hintsRemainingSeconds}s`
+    : appState.showHintsDrawer
+      ? '隐藏'
+      : `建议 (${scene.choices.length})`;
+
+  root.innerHTML = `
+    <main class="full-screen-app play-screen">
+      <!-- 1. 幕数黑屏转场 Card -->
+      ${appState.isSceneTransitioning
+      ? `
+        <div class="rpg-scene-transition-card">
+          <div class="transition-inner">
+            <span class="trans-act">ACT 0${transScene.act}/05</span>
+            <h1 class="trans-title">${transScene.title}</h1>
+            <p class="trans-subtitle">“${transScene.pressureText}”</p>
+          </div>
+        </div>
+      `
+      : ''
+    }
+
+      <!-- 9:16 全屏场景背景图 -->
+      <div class="bg-canvas" style="background-image: url('${scene.bgImage || './assets/demon_castle_gate_v.png'}');"></div>
+      <div class="bg-vignette-overlay"></div>
+
+      <!-- 2. 核心：透明背景抠图人物立绘 (如果魔王慌张则叠加晃动与汗水特效) -->
+      <div class="huge-character-stage">
+        ${speakerImage
+      ? `<img src="${speakerImage}" class="huge-character-portrait-img cutout-transparent ${isPanickedEmotion ? 'panicked-portrait-img' : ''}" alt="${currentSpeaker.name}" />`
+      : ''
+    }
+      </div>
+
+      <!-- 3. 游玩 UI 层 -->
+      <div class="screen-content play-content" id="play-screen-touch-area">
+        
+        <!-- 极简顶部状态栏 -->
+        <header class="minimal-top-bar">
+          <div class="scene-title-group">
+            <span class="act-badge">Act ${scene.act}/5</span>
+            <span class="location-title">${scene.locationName || '魔王城'}</span>
+          </div>
+          <button id="dev-stats-toggle" class="dev-icon-btn" title="查看局势与设置">⚙️</button>
+        </header>
+
+        <!-- 局势监控 Popover -->
+        ${appState.showDevStats
+      ? `
+          <div class="dev-stats-popover">
+            <div class="popover-title">⚙️ 同伴态度与隐性局势监控</div>
+            <div class="popover-grid">
+              ${Object.entries(appState.stats)
+        .map(([k, v]) => `<div><span>${STAT_METADATA[k] ? STAT_METADATA[k].label : k}:</span> <strong>${v}</strong></div>`)
+        .join('')}
+            </div>
+          </div>
+        `
+      : ''
+    }
+
+        <!-- 4. 屏幕下方舞台与 JRPG 暗黑金边对话框 -->
+        <div class="img2797-bottom-stage">
+          
+          <!-- 上回合裁决 Badge -->
+          ${lastTurn && appState.dialogueIndex === 0
+      ? `
+            <div class="adjudication-pill adj-${lastTurn.adjudication}">
+              ${lastTurn.adjudication === 'success'
+        ? '✨ 思考裁决: 表达说服同伴'
+        : lastTurn.adjudication === 'costly_success'
+          ? '⚡ 思考裁决: 付出代价化解'
+          : lastTurn.adjudication === 'failure'
+            ? '⚠️ 思考裁决: 行动失败 · 风险上升'
+            : '🔥 思考裁决: 严重破绽 · 身份败露'
+      }: ${lastTurn.actionLabel}
+            </div>
+          `
+      : ''
+    }
+
+          <!-- 核心：JRPG 典雅暗黑金边对话框 -->
+          <div class="rpg-dialogue-box">
+            
+            <div class="speaker-ribbon-badge">
+              <strong class="speaker-ribbon-name" style="color: ${currentSpeaker.color};">${currentSpeaker.id === 'aslan' ? '阿斯兰 (我)' : currentSpeaker.name}</strong>
+              ${currentSpeaker.id !== 'narrator' && currentSpeaker.role ? `<span class="speaker-ribbon-tag">${currentSpeaker.role}</span>` : ''}
+            </div>
+
+            <div class="dialogue-card-body">
+              <p class="speech-typewriter-text">“${currentDialogue.content}”</p>
+            </div>
+
+            <div class="dialogue-footer-bar">
+              <div class="advance-cue">
+                ${isLastDialogue
+      ? (lastTurn
+        ? '<span>⚡ 点击屏幕任意位置转场 ▶</span>'
+        : '<span>💬 请选择建议或输入你的隐秘行动</span>')
+      : '<span>▼ 点击任意位置继续</span>'
+    }
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 5. 自由聊天主导控制台 + 折叠式 💡 建议提示 Drawer -->
+          ${shouldShowControls && !lastTurn
+      ? `
+            <footer class="img2797-choice-deck deck-visible">
+                <!-- 经典建议选项卡片 (展开后呈现) -->
+                ${appState.showHintsDrawer
+        ? `
+                  <div class="choices-stack hints-drawer-expanded">
+                    ${scene.choices
+          .map(
+            (ch, idx) => `
+                      <button class="vn-choice-btn ${ch.riskTag === '支线' ? 'side-quest-btn' : ''}" data-hint-index="${idx}">
+                        <div class="choice-text-col">
+                          <strong class="choice-title-text">${ch.label}</strong>
+                          ${ch.intent ? `<small class="choice-intent-text">${ch.intent}</small>` : ''}
+                        </div>
+                      </button>
+                    `,
+          )
+          .join('')}
+                  </div>
+                `
+        : ''
+      }
+
+                <!-- 核心：自由聊天输入 Console -->
+                <form id="free-action-form" class="free-console-bar primary-chat-bar">
+                  <div class="input-wrapper">
+                    <span class="console-icon">💬</span>
+                    <input id="free-action-input" placeholder="向同伴自由聊天/解释 (如：这是古魔法的因果反转诱导术，阵灵在诱骗我们当祭品)..." required />
+                  </div>
+                  <button id="toggle-hints-btn" type="button" class="hints-toggle-btn ${areHintsLocked ? 'is-locked' : ''}" ${areHintsLocked ? 'disabled aria-disabled="true"' : ''}>
+                    <span>${hintsButtonLabel}</span>
+                    ${areHintsLocked ? '' : `<span class="hints-chevron">${appState.showHintsDrawer ? '⌃' : '⌄'}</span>`}
+                  </button>
+                  <button type="submit" class="send-btn">发送</button>
+                </form>
+            </footer>
+          `
+      : ''
+    }
+
+        </div>
+
+      </div>
+    </main>
+  `;
+
+  if (hintCountdownTimer) {
+    clearTimeout(hintCountdownTimer);
+    hintCountdownTimer = null;
+  }
+  if (shouldShowHintControls && areHintsLocked) {
+    hintCountdownTimer = setTimeout(updateHintCountdownButton, Math.min(1000, hintsRemainingMs));
+  }
+
+  // 绑定事件
+  document.getElementById('dev-stats-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    appState.showDevStats = !appState.showDevStats;
+    render();
+  });
+
+  const toggleHintsBtn = document.getElementById('toggle-hints-btn');
+  if (toggleHintsBtn) {
+    toggleHintsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (appState.hintsUnlockAt && Date.now() < appState.hintsUnlockAt) return;
+      appState.showHintsDrawer = !appState.showHintsDrawer;
+      render();
+    });
+  }
+
+  const touchArea = document.getElementById('play-screen-touch-area');
+  if (touchArea) {
+    touchArea.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('form')) {
+        return;
+      }
+      if (appState.dialogueIndex < dialogueQueue.length - 1) {
+        appState.dialogueIndex += 1;
+        render();
+      } else if (lastTurn) {
+        if (lastTurn.nextSceneId) {
+          triggerSceneTransition(lastTurn.nextSceneId);
+        } else {
+          appState.ending = appState.ending || determineEnding(appState.stats, appState.flags);
+          appState.view = 'result';
+          render();
+        }
+      }
+    });
+  }
+
+  document.querySelectorAll('[data-hint-index]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.getAttribute('data-hint-index'), 10);
+      const hints = scene.choices || [];
+      if (hints[idx]) {
+        applyTurn(hints[idx]);
+      }
+    });
+  });
+
+  const freeForm = document.getElementById('free-action-form');
+  if (freeForm) {
+    freeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const inputEl = document.getElementById('free-action-input');
+      const sendBtn = freeForm.querySelector('.send-btn');
+      const val = inputEl ? inputEl.value.trim() : '';
+      if (!val) return;
+
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerText = '🔮 裁决中...';
+      }
+      if (inputEl) inputEl.disabled = true;
+
+      const result = await requestLLMAdjudication(val);
+      applyTurn(result);
+    });
+  }
+
+  const nextBtn = document.getElementById('next-act-btn');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (lastTurn && lastTurn.nextSceneId) {
+        triggerSceneTransition(lastTurn.nextSceneId);
+      } else {
+        appState.ending = appState.ending || determineEnding(appState.stats, appState.flags);
+        appState.view = 'result';
+        render();
+      }
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. 全屏 9:16 - 结算视图 (含有专属背景图 + 角色大特写)
+// ---------------------------------------------------------------------------
+function renderResultView(root) {
+  const ending = appState.ending || ENDINGS.stalemate;
+  const endingReason = getEndingReason(ending);
+  const reasonLabel = ending.tone === 'good' ? '通关原因' : '破绽原因';
+
+  const bgImage = ending.bgImage || './assets/empty_throne_v.png';
+  const heroPortrait = ending.heroPortrait || './assets/char_aslan.png';
+
+  root.innerHTML = `
+    <main class="full-screen-app result-screen">
+      <!-- 专属结局背景图 -->
+      <div class="bg-canvas" style="background-image: url('${bgImage}');"></div>
+      <div class="bg-vignette-overlay"></div>
+
+      <div class="screen-content result-content">
+        <section class="ending-summary-panel tone-${ending.tone}">
+          <span class="ending-tag-pill">大结局</span>
+          <h1 class="ending-hero-title">大结局</h1>
+          <p class="ending-outcome-name">${ending.title}</p>
+          <div class="compact-cause-line">
+            <span>${reasonLabel}</span>
+            <strong>${endingReason}</strong>
+          </div>
+        </section>
+
+        <footer class="bottom-action-bar">
+          <button id="restart-game-btn" class="glow-primary-btn pulse">
+            <span>再来一局</span>
+          </button>
+        </footer>
+
+      </div>
+    </main>
+  `;
+
+  document.getElementById('restart-game-btn').addEventListener('click', resetGame);
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.__WHAT_IF_ENGINE__ = {
+    adjudicateFreeAction,
+    buildLLMPromptContext,
+    requestLLMAdjudication,
+    validateAdjudication,
+    validateEndingCandidate,
+    verifyCharacterRedLines,
+    determineEnding,
+    INITIAL_STATS,
+    INITIAL_FLAGS,
+    SCENE_TREE,
+    ENDINGS,
+  };
+}
+
+if (typeof document !== 'undefined') {
+  render();
+  preloadAllAssets();
+}
